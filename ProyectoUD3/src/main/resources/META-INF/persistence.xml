@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <persistence-unit name="default" transaction-type="RESOURCE_LOCAL">
+
+
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        <!-- Las cuatro clases @Entity se añadiran en el paso siguiente. -->
+        <!-- docker run -d (-)-name mariadb-ud3 -e MARIADB_ROOT_PASSWORD=12345Abcde -e MARIADB_DATABASE=proyecto_ud3 -p 3306:3306 -v datos_ud3:/var/lib/mysql mariadb:11.4-->
+
+        <class>org.example.modelos.Proveedor</class>
+        <class>org.example.modelos.Pieza</class>
+        <class>org.example.modelos.Proyecto</class>
+        <class>org.example.modelos.Gestion</class>
+
+        <properties>
+            <property name="jakarta.persistence.jdbc.driver" value="org.mariadb.jdbc.Driver"/>
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:mariadb://localhost:3306/proyecto_ud3"/>
+
+            <property name="jakarta.persistence.jdbc.user"
+                      value="root"/>
+
+            <property name="jakarta.persistence.jdbc.password"
+                      value="12345Abcde"/>
+
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
+        </properties>
+
+
+    </persistence-unit>
+</persistence>
