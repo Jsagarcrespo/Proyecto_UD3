@@ -68,4 +68,25 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
 
         return consulta.getResultList();
     }
+
+
+    // ELIMINAR
+    @Override
+    public void delete(Proveedor proveedor) {
+
+        String jpql = "SELECT COUNT(g) FROM Gestion g " + "WHERE g.proveedor.codigo = :codigo";
+
+        TypedQuery<Long> consulta = em.createQuery(jpql, Long.class);
+
+        consulta.setParameter("codigo", proveedor.getCodigo());
+
+        Long total = consulta.getSingleResult();
+
+        if (total > 0) {
+            throw new IllegalArgumentException("No puedes eliminar un proveedor con suministros");
+        }
+
+        super.delete(proveedor);
+    }
+
 }
