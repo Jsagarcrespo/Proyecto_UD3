@@ -47,7 +47,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     @Override
     public List<Gestion> buscarPorProveedor(String codigo) {
 
-        String jpql = "SELECT g FROM Gestion g " + "WHERE g.proveedor.codigo = :codigo";
+        String jpql = "SELECT g FROM Gestion g WHERE g.proveedor.codigo = :codigo";
 
         TypedQuery<Gestion> consulta = em.createQuery(jpql, Gestion.class);
 
@@ -60,7 +60,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     @Override
     public List<Gestion> buscarPorPieza(String codigo) {
 
-        String jpql = "SELECT g FROM Gestion g " + "WHERE g.pieza.codigo = :codigo";
+        String jpql = "SELECT g FROM Gestion g WHERE g.pieza.codigo = :codigo";
 
         TypedQuery<Gestion> consulta = em.createQuery(jpql, Gestion.class);
 
@@ -73,7 +73,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     @Override
     public List<Gestion> buscarPorProyecto(String codigo) {
 
-        String jpql = "SELECT g FROM Gestion g " + "WHERE g.proyecto.codigo = :codigo";
+        String jpql = "SELECT g FROM Gestion g WHERE g.proyecto.codigo = :codigo";
 
         TypedQuery<Gestion> consulta = em.createQuery(jpql, Gestion.class);
 

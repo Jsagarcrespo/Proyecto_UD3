@@ -10,5 +10,9 @@ public interface IProveedorDao {
 
     List<Proveedor> buscarPorNombre(String nombre);
 
+    List<Proveedor> buscarPorApellidos(String apellidos);
+
     List<Proveedor> buscarPorDireccion(String direccion);
+
+    List<Proveedor> buscarPorPieza(String pieza);
 }

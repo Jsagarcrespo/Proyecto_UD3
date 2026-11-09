@@ -38,8 +38,8 @@ public class VentanaPrincipal extends JFrame {
         proyectosButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
-                JOptionPane.showMessageDialog(VentanaPrincipal.this, "Ventana de proyectos pendiente");
+                VentanaProyectos ventana = new VentanaProyectos();
+                ventana.setVisible(true);
             }
         });
 
@@ -48,7 +48,9 @@ public class VentanaPrincipal extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
 
-                JOptionPane.showMessageDialog(VentanaPrincipal.this, "Ventana de piezas pendiente");
+
+                VentanaPiezas ventana = new VentanaPiezas();
+                ventana.setVisible(true);
             }
         });
 
@@ -57,7 +59,8 @@ public class VentanaPrincipal extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
 
-                JOptionPane.showMessageDialog(VentanaPrincipal.this, "Ventana de suministros pendiente");
+                VentanaGestiones ventana = new VentanaGestiones();
+                ventana.setVisible(true);
             }
         });
 

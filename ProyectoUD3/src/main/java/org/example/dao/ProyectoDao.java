@@ -47,7 +47,7 @@ public class ProyectoDao extends dao<Proyecto, String> implements IProyectoDao {
     @Override
     public List<Proyecto> buscarPorNombre(String nombre) {
 
-        String jpql = "SELECT p FROM Proyecto p " + "WHERE LOWER(p.nombre) LIKE LOWER(:nombre)";
+        String jpql = "SELECT p FROM Proyecto p WHERE LOWER(p.nombre) LIKE LOWER(:nombre)";
 
         TypedQuery<Proyecto> consulta = em.createQuery(jpql, Proyecto.class);
 
@@ -60,7 +60,7 @@ public class ProyectoDao extends dao<Proyecto, String> implements IProyectoDao {
     @Override
     public List<Proyecto> buscarPorCiudad(String ciudad) {
 
-        String jpql = "SELECT p FROM Proyecto p " + "WHERE LOWER(p.ciudad) LIKE LOWER(:ciudad)";
+        String jpql = "SELECT p FROM Proyecto p WHERE LOWER(p.ciudad) LIKE LOWER(:ciudad)";
 
         TypedQuery<Proyecto> consulta = em.createQuery(jpql, Proyecto.class);
 
@@ -73,7 +73,7 @@ public class ProyectoDao extends dao<Proyecto, String> implements IProyectoDao {
     @Override
     public void delete(Proyecto proyecto) {
 
-        String jpql = "SELECT COUNT(g) FROM Gestion g " + "WHERE g.proyecto.codigo = :codigo";
+        String jpql = "SELECT COUNT(g) FROM Gestion g WHERE g.proyecto.codigo = :codigo";
 
         TypedQuery<Long> consulta = em.createQuery(jpql, Long.class);
 

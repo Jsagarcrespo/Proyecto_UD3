@@ -47,7 +47,7 @@ public class PiezaDao extends dao<Pieza, String> implements IPiezaDao {
     @Override
     public List<Pieza> buscarPorNombre(String nombre) {
 
-        String jpql = "SELECT p FROM Pieza p " + "WHERE LOWER(p.nombre) LIKE LOWER(:nombre)";
+        String jpql = "SELECT p FROM Pieza p WHERE LOWER(p.nombre) LIKE LOWER(:nombre)";
 
         TypedQuery<Pieza> consulta = em.createQuery(jpql, Pieza.class);
 
@@ -61,7 +61,7 @@ public class PiezaDao extends dao<Pieza, String> implements IPiezaDao {
     public void delete(Pieza pieza) {
 
         // Comprobar si tiene suministros asociados
-        String jpql = "SELECT COUNT(g) FROM Gestion g " + "WHERE g.pieza.codigo = :codigo";
+        String jpql = "SELECT COUNT(g) FROM Gestion g WHERE g.pieza.codigo = :codigo";
 
         TypedQuery<Long> consulta = em.createQuery(jpql, Long.class);
 

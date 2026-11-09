@@ -38,8 +38,8 @@ public class VentanaProvedores extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         Lista.setEditable(false);
-        TipoBusqueda.setModel(new DefaultComboBoxModel<>(
-                new String[]{"Codigo", "Nombre", "Direccion"}));
+
+        TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Apellidos", "Direccion", "Pieza suministrada"}));
 
         mostrarTodos();
 
@@ -103,20 +103,14 @@ public class VentanaProvedores extends JFrame {
                         rellenarCampos(proveedores.get(linea));
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(VentanaProvedores.this,
-                            "No se ha podido seleccionar el proveedor");
+                    JOptionPane.showMessageDialog(VentanaProvedores.this, "No se ha podido seleccionar el proveedor");
                 }
             }
         });
     }
 
     private Proveedor leerProveedor() {
-        Proveedor proveedor = new Proveedor(
-                Codigo.getText().trim(),
-                Nombre.getText().trim(),
-                Apellidos.getText().trim(),
-                Direccion.getText().trim()
-        );
+        Proveedor proveedor = new Proveedor(Codigo.getText().trim(), Nombre.getText().trim(), Apellidos.getText().trim(), Direccion.getText().trim());
         proveedor.validar();
         return proveedor;
     }
@@ -160,8 +154,7 @@ public class VentanaProvedores extends JFrame {
             return;
         }
 
-        int respuesta = JOptionPane.showConfirmDialog(this,
-                "¿Eliminar este proveedor?", "Confirmar", JOptionPane.YES_NO_OPTION);
+        int respuesta = JOptionPane.showConfirmDialog(this, "¿Eliminar este proveedor?", "Confirmar", JOptionPane.YES_NO_OPTION);
         if (respuesta != JOptionPane.YES_OPTION) {
             return;
         }
@@ -181,33 +174,61 @@ public class VentanaProvedores extends JFrame {
         }
     }
 
+
+    // BUSCAR PROVEEDORES
     private void buscarProveedor() {
+
         String texto = Buscar.getText().trim();
+
         if (texto.isEmpty()) {
             mostrarTodos();
             return;
         }
 
         try (ProveedorDao dao = new ProveedorDao()) {
+
             List<Proveedor> resultados = new ArrayList<>();
+
             int opcion = TipoBusqueda.getSelectedIndex();
 
             if (opcion == 0) {
+
+                // BUSCAR POR CODIGO
                 Proveedor proveedor = dao.find(texto);
+
                 if (proveedor != null) {
                     resultados.add(proveedor);
                 }
+
             } else if (opcion == 1) {
+
+                // BUSCAR POR NOMBRE
                 resultados = dao.buscarPorNombre(texto);
+
             } else if (opcion == 2) {
+
+                // BUSCAR POR APELLIDOS
+                resultados = dao.buscarPorApellidos(texto);
+
+            } else if (opcion == 3) {
+
+                // BUSCAR POR DIRECCION
                 resultados = dao.buscarPorDireccion(texto);
+
+            } else if (opcion == 4) {
+
+                // BUSCAR POR PIEZA SUMINISTRADA
+                resultados = dao.buscarPorPieza(texto);
             }
 
             mostrarLista(resultados);
+
         } catch (Exception e) {
+
             JOptionPane.showMessageDialog(this, "Error al buscar: " + e.getMessage());
         }
     }
+
 
     private void mostrarTodos() {
         try (ProveedorDao dao = new ProveedorDao()) {
@@ -221,8 +242,7 @@ public class VentanaProvedores extends JFrame {
         proveedores = new ArrayList<>(lista);
         String texto = "";
         for (Proveedor p : proveedores) {
-            texto += p.getCodigo() + " | " + p.getNombre() + " | "
-                    + p.getApellidos() + " | " + p.getDireccion() + "\n";
+            texto += p.getCodigo() + " | " + p.getNombre() + " | " + p.getApellidos() + " | " + p.getDireccion() + "\n";
         }
         Lista.setText(texto);
         Lista.setCaretPosition(0);
