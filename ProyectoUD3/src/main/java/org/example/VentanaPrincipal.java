@@ -1,5 +1,11 @@
 package org.example;
 
+/*
+ * VENTANA PRINCIPAL DE LA APLICACION
+ * Es el menu visual: desde sus botones se abren las cuatro ventanas.
+ * No trabaja con la base de datos directamente; eso se hace en los DAO.
+ */
+
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;

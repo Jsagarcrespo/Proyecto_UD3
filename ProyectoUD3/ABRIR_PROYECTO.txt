@@ -1,0 +1,11 @@
+PROYECTO UD3 REVISADO - INSTRUCCIONES
+
+1. Abre en IntelliJ la carpeta Proyecto_UD3/ProyectoUD3 (la que contiene pom.xml).
+2. El proyecto conserva .form, SQL, configuracion Maven y fuentes Java corregidos/comentados.
+3. Recarga Maven. Arranca tu MariaDB local y ejecuta Maven clean y test.
+4. Ejecuta org.example.App para abrir la interfaz Swing.
+5. No se incluyen carpetas target anteriores para evitar errores de clases compiladas antiguas.
+6. Consulta LEEME_CAMBIOS.txt para conocer todas las modificaciones y la limitacion de verificacion.
+
+No se ha comprobado la conexion real con tu base de datos.
+Atencion: persistence.xml mantiene la configuracion local original: no compartas credenciales.

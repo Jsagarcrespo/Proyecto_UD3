@@ -1,5 +1,12 @@
 package org.example;
 
+/*
+ * VENTANA DE PROVEEDORES
+ * Los JTextField recogen datos y el JTextArea muestra la lista.
+ * Los botones llaman a metodos de esta clase, como en la UD2.
+ * ProveedorDao se encarga de consultar y guardar con Hibernate.
+ */
+
 import org.example.dao.ProveedorDao;
 import org.example.modelos.Proveedor;
 
@@ -29,6 +36,8 @@ public class VentanaProvedores extends JFrame {
 
     private List<Proveedor> proveedores = new ArrayList<>();
 
+    // El constructor prepara la ventana y conecta los botones con los metodos.
+    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
     public VentanaProvedores() {
 
         setTitle("Gestion de Proveedores");
@@ -38,6 +47,7 @@ public class VentanaProvedores extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         Lista.setEditable(false);
+        Lista.setLineWrap(false); // Una linea del listado corresponde a un registro.
 
         TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Apellidos", "Direccion", "Pieza suministrada"}));
 
@@ -97,6 +107,12 @@ public class VentanaProvedores extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 try {
+                    // No seleccionar el ultimo registro si pulsamos debajo del listado.
+                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
+                    if (e.getY() >= altoLinea * proveedores.size()) {
+                        return;
+                    }
+
                     int posicion = Lista.viewToModel2D(e.getPoint());
                     int linea = Lista.getLineOfOffset(posicion);
                     if (linea >= 0 && linea < proveedores.size()) {
@@ -109,13 +125,19 @@ public class VentanaProvedores extends JFrame {
         });
     }
 
+    // Lee los cuatro JTextField, crea un Proveedor temporal y valida
+    // que no falten campos antes de guardar nada en MariaDB.
     private Proveedor leerProveedor() {
         Proveedor proveedor = new Proveedor(Codigo.getText().trim(), Nombre.getText().trim(), Apellidos.getText().trim(), Direccion.getText().trim());
         proveedor.validar();
         return proveedor;
     }
 
+    // Primero compruebo que ese codigo no exista; despues hago dao.create().
+    // El try/catch muestra el error al usuario sin cerrar la ventana.
     private void anadirProveedor() {
+        // try (...) cierra el EntityManager cuando termina la operacion,
+        // incluso si se produce un error que capturamos en catch.
         try (ProveedorDao dao = new ProveedorDao()) {
             Proveedor proveedor = leerProveedor();
             if (dao.find(proveedor.getCodigo()) != null) {
@@ -131,13 +153,24 @@ public class VentanaProvedores extends JFrame {
         }
     }
 
+    // Busco el Proveedor original con find() y cambio solo sus datos.
+    // No cambio el codigo ni sus relaciones con las gestiones.
     private void modificarProveedor() {
         try (ProveedorDao dao = new ProveedorDao()) {
-            Proveedor proveedor = leerProveedor();
-            if (dao.find(proveedor.getCodigo()) == null) {
+            // Leo los datos escritos por el usuario.
+            Proveedor datos = leerProveedor();
+
+            // Busco el proveedor que ya esta guardado.
+            // Asi solo modifico los campos editables, sin tocar sus suministros.
+            Proveedor proveedor = dao.find(datos.getCodigo());
+            if (proveedor == null) {
                 JOptionPane.showMessageDialog(this, "El proveedor no existe");
                 return;
             }
+
+            proveedor.setNombre(datos.getNombre());
+            proveedor.setApellidos(datos.getApellidos());
+            proveedor.setDireccion(datos.getDireccion());
             dao.update(proveedor);
             JOptionPane.showMessageDialog(this, "Proveedor modificado");
             limpiarCampos();
@@ -147,6 +180,8 @@ public class VentanaProvedores extends JFrame {
         }
     }
 
+    // Pido confirmacion antes de borrar. ProveedorDao revisa que
+    // no haya suministros asociados y, si existen, impide el borrado.
     private void eliminarProveedor() {
         String codigo = Codigo.getText().trim();
         if (codigo.isEmpty()) {
@@ -176,9 +211,16 @@ public class VentanaProvedores extends JFrame {
 
 
     // BUSCAR PROVEEDORES
+    // Segun el JComboBox, elijo una busqueda distinta en el DAO.
+    // La busqueda por pieza usa JOIN, porque consulta las gestiones.
     private void buscarProveedor() {
 
         String texto = Buscar.getText().trim();
+
+        // Una busqueda nueva invalida la seleccion anterior, aunque
+        // el texto introducido sea incorrecto o la busqueda falle.
+        Codigo.setText("");
+        Codigo.setEditable(true);
 
         if (texto.isEmpty()) {
             mostrarTodos();
@@ -238,7 +280,18 @@ public class VentanaProvedores extends JFrame {
         }
     }
 
+    // Guarda el resultado en una lista y muestra cada objeto en una linea.
+    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
     private void mostrarLista(List<Proveedor> lista) {
+
+        // Al cambiar el listado, borro los datos del registro anterior.
+        // De esta manera no se modifica ni se elimina uno por accidente.
+        Codigo.setText("");
+        Nombre.setText("");
+        Apellidos.setText("");
+        Direccion.setText("");
+        Codigo.setEditable(true);
+
         proveedores = new ArrayList<>(lista);
         String texto = "";
         for (Proveedor p : proveedores) {
@@ -248,6 +301,7 @@ public class VentanaProvedores extends JFrame {
         Lista.setCaretPosition(0);
     }
 
+    // Copia al formulario los datos del registro seleccionado para editarlo.
     private void rellenarCampos(Proveedor proveedor) {
         Codigo.setText(proveedor.getCodigo());
         Nombre.setText(proveedor.getNombre());
@@ -256,6 +310,7 @@ public class VentanaProvedores extends JFrame {
         Codigo.setEditable(false);
     }
 
+    // Deja el formulario preparado para introducir otro registro.
     private void limpiarCampos() {
         Codigo.setText("");
         Nombre.setText("");

@@ -1,5 +1,12 @@
 package org.example;
 
+/*
+ * VENTANA DE PIEZAS
+ * Permite anadir, modificar, eliminar, buscar y listar piezas.
+ * El precio se lee como texto y se convierte a BigDecimal.
+ * Los datos se guardan mediante PiezaDao; la ventana no escribe SQL.
+ */
+
 import org.example.dao.PiezaDao;
 import org.example.modelos.Pieza;
 
@@ -30,6 +37,8 @@ public class VentanaPiezas extends JFrame {
 
     private List<Pieza> piezas = new ArrayList<>();
 
+    // El constructor prepara la ventana y conecta los botones con los metodos.
+    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
     public VentanaPiezas() {
 
         setTitle("Gestion de Piezas");
@@ -39,7 +48,9 @@ public class VentanaPiezas extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         Lista.setEditable(false);
-        TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre"}));
+        Lista.setLineWrap(false); // Una linea del listado corresponde a un registro.
+
+        TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Precio entre", "Proveedor (codigo)", "Proyecto (codigo)"}));
 
         mostrarTodos();
 
@@ -98,6 +109,12 @@ public class VentanaPiezas extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 try {
+                    // No seleccionar el ultimo registro si pulsamos debajo del listado.
+                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
+                    if (e.getY() >= altoLinea * piezas.size()) {
+                        return;
+                    }
+
                     int posicion = Lista.viewToModel2D(e.getPoint());
                     int linea = Lista.getLineOfOffset(posicion);
 
@@ -112,6 +129,8 @@ public class VentanaPiezas extends JFrame {
     }
 
     // RECOGER LOS DATOS DE LAS CAJAS DE TEXTO
+    // Convierto el precio introducido en un BigDecimal, no en double.
+    // Asi trabajamos con importes decimales sin errores de redondeo binario.
     private Pieza leerPieza() {
 
         String codigo = Codigo.getText().trim();
@@ -140,7 +159,10 @@ public class VentanaPiezas extends JFrame {
     }
 
     // AÑADIR
+    // Valido los campos, compruebo que el codigo sea nuevo y guardo.
     private void anadirPieza() {
+        // try (...) cierra el EntityManager cuando termina la operacion,
+        // incluso si se produce un error que capturamos en catch.
         try (PiezaDao dao = new PiezaDao()) {
             Pieza pieza = leerPieza();
 
@@ -160,6 +182,7 @@ public class VentanaPiezas extends JFrame {
     }
 
     // MODIFICAR
+    // Recupero la pieza existente y actualizo nombre, precio y descripcion.
     private void modificarPieza() {
         try (PiezaDao dao = new PiezaDao()) {
             Pieza datos = leerPieza();
@@ -185,6 +208,7 @@ public class VentanaPiezas extends JFrame {
     }
 
     // ELIMINAR
+    // Compruebo que el usuario confirme y que la pieza no tenga gestiones.
     private void eliminarPieza() {
         String codigo = Codigo.getText().trim();
 
@@ -216,9 +240,17 @@ public class VentanaPiezas extends JFrame {
         }
     }
 
-    // BUSCAR POR CODIGO O NOMBRE
+    // BUSCAR PIEZAS
+    // Permite buscar por codigo, nombre, intervalo de precios,
+    // proveedor o proyecto. El intervalo se escribe por ejemplo 10;50.
     private void buscarPieza() {
+
         String texto = Buscar.getText().trim();
+
+        // Una busqueda nueva invalida la seleccion anterior, aunque
+        // el texto introducido sea incorrecto o la busqueda falle.
+        Codigo.setText("");
+        Codigo.setEditable(true);
 
         if (texto.isEmpty()) {
             mostrarTodos();
@@ -226,24 +258,77 @@ public class VentanaPiezas extends JFrame {
         }
 
         try (PiezaDao dao = new PiezaDao()) {
+
             List<Pieza> resultados = new ArrayList<>();
+
             int opcion = TipoBusqueda.getSelectedIndex();
 
             if (opcion == 0) {
+
+                // BUSCAR POR CODIGO
                 Pieza pieza = dao.find(texto);
+
                 if (pieza != null) {
                     resultados.add(pieza);
                 }
+
             } else if (opcion == 1) {
+
+                // BUSCAR POR NOMBRE
                 resultados = dao.buscarPorNombre(texto);
+
+            } else if (opcion == 2) {
+
+                // BUSCAR POR INTERVALO DE PRECIOS
+
+                String[] precios = texto.split(";", -1);
+
+                if (precios.length != 2) {
+
+                    JOptionPane.showMessageDialog(this, "Escribe los precios asi: 10;50");
+                    return;
+                }
+
+                BigDecimal minimo = new BigDecimal(precios[0].trim().replace(",", "."));
+
+                BigDecimal maximo = new BigDecimal(precios[1].trim().replace(",", "."));
+
+                if (minimo.compareTo(BigDecimal.ZERO) < 0 || maximo.compareTo(minimo) < 0) {
+
+                    JOptionPane.showMessageDialog(this, "El intervalo de precios no es valido");
+                    return;
+                }
+
+                resultados = dao.buscarPorPrecio(minimo, maximo);
+
+            } else if (opcion == 3) {
+
+                // BUSCAR POR CODIGO DE PROVEEDOR
+                resultados = dao.buscarPorProveedor(texto);
+
+            } else if (opcion == 4) {
+
+                // BUSCAR POR CODIGO DE PROYECTO
+                resultados = dao.buscarPorProyecto(texto);
             }
 
             mostrarLista(resultados);
 
+            if (resultados.isEmpty()) {
+
+                JOptionPane.showMessageDialog(this, "No se han encontrado piezas");
+            }
+
+        } catch (NumberFormatException e) {
+
+            JOptionPane.showMessageDialog(this, "Precio incorrecto. Ejemplo: 10;50");
+
         } catch (Exception e) {
+
             JOptionPane.showMessageDialog(this, "Error al buscar: " + e.getMessage());
         }
     }
+
 
     // MOSTRAR TODAS
     private void mostrarTodos() {
@@ -255,7 +340,18 @@ public class VentanaPiezas extends JFrame {
     }
 
     // MOSTRAR LISTADO
+    // Guarda el resultado en una lista y muestra cada objeto en una linea.
+    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
     private void mostrarLista(List<Pieza> lista) {
+
+        // Al cambiar el listado, borro los datos del registro anterior.
+        // De esta manera no se modifica ni se elimina uno por accidente.
+        Codigo.setText("");
+        Nombre.setText("");
+        Precio.setText("");
+        Descripcion.setText("");
+        Codigo.setEditable(true);
+
         piezas = new ArrayList<>(lista);
         String texto = "";
 
@@ -268,6 +364,7 @@ public class VentanaPiezas extends JFrame {
     }
 
     // CARGAR LA PIEZA SELECCIONADA
+    // Copia al formulario los datos del registro seleccionado para editarlo.
     private void rellenarCampos(Pieza pieza) {
         Codigo.setText(pieza.getCodigo());
         Nombre.setText(pieza.getNombre());
@@ -277,6 +374,7 @@ public class VentanaPiezas extends JFrame {
     }
 
     // LIMPIAR
+    // Deja el formulario preparado para introducir otro registro.
     private void limpiarCampos() {
         Codigo.setText("");
         Nombre.setText("");

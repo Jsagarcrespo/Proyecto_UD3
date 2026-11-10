@@ -4,6 +4,8 @@ import org.example.modelos.Proveedor;
 
 import java.util.List;
 
+// La interfaz indica que consultas debe tener el DAO de proveedores.
+// No realiza consultas; solo declara los metodos que implementa la clase DAO.
 public interface IProveedorDao {
 
     List<Proveedor> listar();

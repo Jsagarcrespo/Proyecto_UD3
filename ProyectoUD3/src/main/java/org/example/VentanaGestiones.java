@@ -1,13 +1,20 @@
 package org.example;
 
+/*
+ * VENTANA DE SUMINISTROS (GESTIONES)
+ * Cada gestion relaciona un proveedor, una pieza y un proyecto.
+ * Los tres JComboBox muestran registros que ya existen en la BD.
+ * El ID se genera en MariaDB/Hibernate, por eso no se escribe a mano.
+ */
+
 import org.example.dao.GestionDao;
 import org.example.dao.PiezaDao;
 import org.example.dao.ProveedorDao;
 import org.example.dao.ProyectoDao;
-import org.example.models.Gestion;
-import org.example.models.Pieza;
-import org.example.models.Proveedor;
-import org.example.models.Proyecto;
+import org.example.modelos.Gestion;
+import org.example.modelos.Pieza;
+import org.example.modelos.Proveedor;
+import org.example.modelos.Proyecto;
 
 import javax.swing.*;
 import java.awt.event.*;
@@ -42,6 +49,8 @@ public class VentanaGestiones extends JFrame {
     private List<Proyecto> proyectos = new ArrayList<>();
     private List<Gestion> gestiones = new ArrayList<>();
 
+    // El constructor prepara la ventana y conecta los botones con los metodos.
+    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
     public VentanaGestiones() {
 
         setTitle("Gestion de Suministros");
@@ -52,10 +61,10 @@ public class VentanaGestiones extends JFrame {
 
         IdGestion.setEditable(false);
         Lista.setEditable(false);
+        Lista.setLineWrap(false); // Cada suministro se muestra en una sola linea.
         Fecha.setText(LocalDate.now().toString());
 
-        TipoBusqueda.setModel(new DefaultComboBoxModel<>(
-                new String[]{"ID", "Proveedor", "Pieza", "Proyecto"}));
+        TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"ID", "Proveedor", "Pieza", "Proyecto"}));
 
         mostrarTodos();
 
@@ -120,6 +129,11 @@ public class VentanaGestiones extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 try {
+                    // El espacio en blanco debajo de las gestiones no es un registro.
+                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
+                    if (e.getY() >= altoLinea * gestiones.size()) {
+                        return;
+                    }
                     int posicion = Lista.viewToModel2D(e.getPoint());
                     int linea = Lista.getLineOfOffset(posicion);
 
@@ -127,16 +141,19 @@ public class VentanaGestiones extends JFrame {
                         rellenarCampos(gestiones.get(linea));
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(VentanaGestiones.this,
-                            "Error al seleccionar suministro");
+                    JOptionPane.showMessageDialog(VentanaGestiones.this, "Error al seleccionar suministro");
                 }
             }
         });
     }
 
     // CARGAR LOS PROVEEDORES, PIEZAS Y PROYECTOS EN LOS COMBOBOX
+    // Llamo a listar() de los tres DAO y relleno los JComboBox.
+    // La opcion de indice 0 es un texto de ayuda, no un registro real.
     private void cargarCombos() {
 
+        // try (...) cierra el EntityManager cuando termina la operacion,
+        // incluso si se produce un error que capturamos en catch.
         try (ProveedorDao dao = new ProveedorDao()) {
             proveedores = dao.listar();
         }
@@ -167,11 +184,12 @@ public class VentanaGestiones extends JFrame {
     }
 
     // LEER LOS DATOS DEL FORMULARIO
+    // Recojo fecha y cantidad, y compruebo los tres desplegables.
+    // Con EntityManager.find() recupero las entidades de ESTA sesion
+    // antes de crear la Gestion que vamos a guardar.
     private Gestion leerGestion(GestionDao dao) {
 
-        if (ComboProveedores.getSelectedIndex() <= 0 ||
-                ComboPiezas.getSelectedIndex() <= 0 ||
-                ComboProyectos.getSelectedIndex() <= 0) {
+        if (ComboProveedores.getSelectedIndex() <= 0 || ComboPiezas.getSelectedIndex() <= 0 || ComboProyectos.getSelectedIndex() <= 0) {
             throw new IllegalArgumentException("Debes elegir proveedor, pieza y proyecto");
         }
 
@@ -189,6 +207,8 @@ public class VentanaGestiones extends JFrame {
             throw new IllegalArgumentException("La cantidad debe ser un numero entero");
         }
 
+        // Restamos 1 porque el indice 0 contiene "Selecciona un...".
+        // Las listas Java empiezan en indice 0, pero los datos del combo en 1.
         Proveedor seleccionadoProveedor = proveedores.get(ComboProveedores.getSelectedIndex() - 1);
         Pieza seleccionadaPieza = piezas.get(ComboPiezas.getSelectedIndex() - 1);
         Proyecto seleccionadoProyecto = proyectos.get(ComboProyectos.getSelectedIndex() - 1);
@@ -198,12 +218,20 @@ public class VentanaGestiones extends JFrame {
         Pieza pieza = dao.getEntityManager().find(Pieza.class, seleccionadaPieza.getCodigo());
         Proyecto proyecto = dao.getEntityManager().find(Proyecto.class, seleccionadoProyecto.getCodigo());
 
+        // Si se ha borrado alguno de estos registros desde otra ventana,
+        // find() devolvera null. Avisamos para que se pulse Mostrar todos.
+        if (proveedor == null || pieza == null || proyecto == null) {
+            throw new IllegalArgumentException(
+                    "Falta un proveedor, una pieza o un proyecto. Pulsa Mostrar todos");
+        }
+
         Gestion gestion = new Gestion(fecha, cantidad, proveedor, pieza, proyecto);
         gestion.validar();
         return gestion;
     }
 
     // AÑADIR
+    // Creo una Gestion nueva; Hibernate asignara automaticamente su ID.
     private void anadirGestion() {
 
         try (GestionDao dao = new GestionDao()) {
@@ -220,6 +248,7 @@ public class VentanaGestiones extends JFrame {
     }
 
     // MODIFICAR
+    // Busco la Gestion por su ID, leo los datos y actualizo sus campos.
     private void modificarGestion() {
 
         if (IdGestion.getText().isEmpty()) {
@@ -255,6 +284,7 @@ public class VentanaGestiones extends JFrame {
     }
 
     // ELIMINAR
+    // Confirmo y elimino la Gestion. Despues se pueden borrar sus padres.
     private void eliminarGestion() {
 
         if (IdGestion.getText().isEmpty()) {
@@ -262,8 +292,7 @@ public class VentanaGestiones extends JFrame {
             return;
         }
 
-        int respuesta = JOptionPane.showConfirmDialog(this,
-                "¿Quieres eliminar este suministro?", "Eliminar", JOptionPane.YES_NO_OPTION);
+        int respuesta = JOptionPane.showConfirmDialog(this, "¿Quieres eliminar este suministro?", "Eliminar", JOptionPane.YES_NO_OPTION);
 
         if (respuesta != JOptionPane.YES_OPTION) {
             return;
@@ -290,6 +319,7 @@ public class VentanaGestiones extends JFrame {
     }
 
     // BUSCAR POR ID O POR CODIGO DE LAS ENTIDADES
+    // Busca una gestion por su ID o por el codigo de alguna entidad asociada.
     private void buscarGestion() {
 
         String texto = Buscar.getText().trim();
@@ -298,6 +328,9 @@ public class VentanaGestiones extends JFrame {
             mostrarTodos();
             return;
         }
+
+        // Si la nueva busqueda falla, no conservamos el ID del suministro anterior.
+        IdGestion.setText("");
 
         try (GestionDao dao = new GestionDao()) {
             List<Gestion> resultados = new ArrayList<>();
@@ -318,6 +351,9 @@ public class VentanaGestiones extends JFrame {
             }
 
             mostrarLista(resultados);
+            if (resultados.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No se han encontrado suministros");
+            }
 
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "El ID debe ser un numero entero");
@@ -340,26 +376,37 @@ public class VentanaGestiones extends JFrame {
         }
     }
 
-    // ESCRIBIR LA LISTA EN PANTALLA
+    // MOSTRAR LOS SUMINISTROS EN PANTALLA
+    // Guarda el resultado en una lista y muestra cada objeto en una linea.
+    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
     private void mostrarLista(List<Gestion> lista) {
 
+        // Quitar la seleccion anterior
+        IdGestion.setText("");
+        Fecha.setText(LocalDate.now().toString());
+        Cantidad.setText("");
+
+        // Tras un error de conexion, un combo podria no tener elementos.
+        if (ComboProveedores.getItemCount() > 0) ComboProveedores.setSelectedIndex(0);
+        if (ComboPiezas.getItemCount() > 0) ComboPiezas.setSelectedIndex(0);
+        if (ComboProyectos.getItemCount() > 0) ComboProyectos.setSelectedIndex(0);
+
         gestiones = new ArrayList<>(lista);
+
         String texto = "";
 
         for (Gestion gestion : gestiones) {
-            texto += "ID: " + gestion.getId()
-                    + " | " + gestion.getFecha()
-                    + " | " + gestion.getCantidad() + " unidades"
-                    + " | Proveedor: " + gestion.getProveedor().getCodigo()
-                    + " | Pieza: " + gestion.getPieza().getCodigo()
-                    + " | Proyecto: " + gestion.getProyecto().getCodigo() + "\n";
+
+            texto += "ID: " + gestion.getId() + " | " + gestion.getFecha() + " | " + gestion.getCantidad() + " unidades" + " | Proveedor: " + gestion.getProveedor().getCodigo() + " | Pieza: " + gestion.getPieza().getCodigo() + " | Proyecto: " + gestion.getProyecto().getCodigo() + "\n";
         }
 
         Lista.setText(texto);
         Lista.setCaretPosition(0);
     }
 
+
     // RELLENAR LOS CAMPOS AL ELEGIR UNA LINEA
+    // Copia al formulario los datos del registro seleccionado para editarlo.
     private void rellenarCampos(Gestion gestion) {
 
         IdGestion.setText(String.valueOf(gestion.getId()));
@@ -389,6 +436,7 @@ public class VentanaGestiones extends JFrame {
     }
 
     // LIMPIAR
+    // Deja el formulario preparado para introducir otro registro.
     private void limpiarCampos() {
 
         IdGestion.setText("");
@@ -396,9 +444,10 @@ public class VentanaGestiones extends JFrame {
         Cantidad.setText("");
         Buscar.setText("");
 
-        ComboProveedores.setSelectedIndex(0);
-        ComboPiezas.setSelectedIndex(0);
-        ComboProyectos.setSelectedIndex(0);
-        TipoBusqueda.setSelectedIndex(0);
+        // Tras un error de conexion, un combo podria no tener elementos.
+        if (ComboProveedores.getItemCount() > 0) ComboProveedores.setSelectedIndex(0);
+        if (ComboPiezas.getItemCount() > 0) ComboPiezas.setSelectedIndex(0);
+        if (ComboProyectos.getItemCount() > 0) ComboProyectos.setSelectedIndex(0);
+        if (TipoBusqueda.getItemCount() > 0) TipoBusqueda.setSelectedIndex(0);
     }
 }

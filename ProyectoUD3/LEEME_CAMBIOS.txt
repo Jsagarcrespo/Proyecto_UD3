@@ -1,0 +1,56 @@
+REVISIÓN DEL PROYECTO UD3 - CAMBIOS Y COPIA EN INTELLIJ
+
+Se han respetado los paquetes reales del archivo ZIP:
+- org.example.dao (clase generica dao con d minuscula)
+- org.example.Idao (I mayuscula)
+- org.example.modelos
+- org.example (ventanas Swing)
+
+FALLOS CORREGIDOS
+1. VentanaProvedores.modificarProveedor(): ahora recupera con find() la entidad
+   y cambia los tres campos, sin reemplazarla por un objeto nuevo.
+2. Ventanas de Proveedores, Piezas y Proyectos: al buscar o mostrar resultados,
+   se borran los campos o el codigo de la seleccion anterior. El cuadro Buscar NO se borra.
+3. Seleccion en los listados: no elegir el ultimo registro al hacer clic
+   en una zona vacia por debajo del texto mostrado.
+4. VentanaGestiones: mensajes claros si una entidad se ha eliminado;
+   control de combos vacios cuando haya un problema de conexion;
+   borrado de ID anterior al iniciar una busqueda nueva.
+5. Validaciones: codigo de maximo 20 caracteres (como la columna SQL);
+   precio con no mas de 2 decimales y maximo 99999999.99 en Pieza.validar().
+6. Eliminados imports innecesarios y comentarios duplicados.
+7. Los test DaoJUnitTest y DaoRestantesTest estaban en una carpeta modelos
+   pero indicaban package org.example: movidos a la carpeta correspondiente.
+8. Anotaciones explicativas a las entidades, metodos DAO, ventanas y tests.
+
+QUÉ NO SE HA CAMBIADO
+- Ninguna clase ni paquete de nombre para evitar romper IntelliJ.
+- Ningun archivo .form: los campos coinciden con los .java.
+- No se ha sustituido Swing por consola.
+- Sin frameworks adicionales ni patrones avanzados.
+- Consultas JPQL con TypedQuery, como en practica 4.01.
+- La base de datos y las credenciales locales siguen iguales (NO publicarlas).
+
+INSTALACION
+1. Haz una copia de tu proyecto original antes de sobrescribir nada.
+2. Copia los .java manteniendo su estructura de carpetas.
+3. IMPORTANTE: mueve los tests DaoJUnitTest.java y DaoRestantesTest.java
+   desde src/test/java/org/example/modelos/ a src/test/java/org/example/.
+   No dejes los originales en modelos: Java veria clases duplicadas.
+4. Conserva intactos los cinco .form del proyecto, ya incluidos aqui.
+5. Recarga Maven y compila.
+6. Ejecuta los tests JUnit con MariaDB abierta.
+7. Ejecuta App y prueba alta, baja, modificacion y busqueda desde Swing.
+
+NOTA DE VERIFICACION
+Se ha podido inspeccionar el codigo fuente y comparar los proyectos UD2 y 4.01.
+La compilacion real con dependencias Hibernate/JUnit y las operaciones MariaDB
+se tienen que comprobar en tu IntelliJ. No se altera la base de datos.
+
+COMPROBACIONES LOCALES EFECTUADAS
+- 24 archivos .java compilan con javac --release 17 usando dependencias de
+  comprobacion (simuladas). Esto verifica sintaxis, tipos y referencias Java,
+  no la conexion real con Hibernate o MariaDB.
+- 5 comprobaciones locales de las validaciones de modelos superadas.
+- Los 5 .form son XML valido y coinciden con los campos de sus clases Java.
+- Los 5 .form son identicos a los originales recibidos.

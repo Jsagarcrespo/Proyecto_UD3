@@ -1,5 +1,11 @@
 package org.example.dao;
 
+/*
+ * DAO DE PROVEEDORES
+ * Hereda las operaciones generales de dao y anade las consultas JPQL.
+ * TypedQuery devuelve objetos Proveedor, no filas SQL sueltas.
+ */
+
 import org.example.Idao.IProveedorDao;
 import org.example.modelos.Proveedor;
 
@@ -10,6 +16,7 @@ import java.util.List;
 public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDao {
 
     // BUSCAR POR CODIGO
+    // find() busca por clave primaria y devuelve null si no existe.
     @Override
     public Proveedor find(String codigo) {
 
@@ -17,6 +24,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // CREAR
+    // Antes de guardar validamos el objeto; super.create() realiza persist y commit.
     @Override
     public Proveedor create(Proveedor proveedor) {
 
@@ -26,6 +34,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // MODIFICAR
+    // Valido y dejo que el DAO generico haga merge y confirme los cambios.
     @Override
     public Proveedor update(Proveedor proveedor) {
 
@@ -35,6 +44,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // LISTAR TODOS
+    // SELECT FROM devuelve objetos de la entidad, ordenados para mostrarlos.
     @Override
     public List<Proveedor> listar() {
 
@@ -46,6 +56,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // BUSCAR POR NOMBRE
+    // LIKE permite encontrar coincidencias aunque no escribamos el nombre completo.
     @Override
     public List<Proveedor> buscarPorNombre(String nombre) {
 
@@ -59,6 +70,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // BUSCAR POR APELLIDOS
+    // Busco un apellido mediante JPQL, ignorando mayusculas y minusculas.
     @Override
     public List<Proveedor> buscarPorApellidos(String apellidos) {
 
@@ -72,6 +84,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // BUSCAR POR DIRECCION
+    // Busco parte de la direccion usando LIKE y un parametro.
     @Override
     public List<Proveedor> buscarPorDireccion(String direccion) {
 
@@ -85,6 +98,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // BUSCAR POR PIEZA SUMINISTRADA
+    // JOIN une la entidad con sus gestiones para consultar piezas relacionadas.
     @Override
     public List<Proveedor> buscarPorPieza(String pieza) {
 
@@ -98,6 +112,7 @@ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDa
     }
 
     // ELIMINAR
+    // Primero cuento las gestiones relacionadas con JPQL; no borro si hay alguna.
     @Override
     public void delete(Proveedor proveedor) {
 

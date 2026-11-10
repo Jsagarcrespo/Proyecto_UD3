@@ -1,5 +1,12 @@
 package org.example;
 
+/*
+ * VENTANA DE PROYECTOS
+ * Hace las mismas operaciones que la de proveedores, pero sobre Proyecto.
+ * Utiliza JTextField, JComboBox, JTextArea y botones Swing.
+ * Las consultas JPQL estan en ProyectoDao.
+ */
+
 import org.example.dao.ProyectoDao;
 import org.example.modelos.Proyecto;
 
@@ -30,6 +37,8 @@ public class VentanaProyectos extends JFrame {
 
     private List<Proyecto> proyectos = new ArrayList<>();
 
+    // El constructor prepara la ventana y conecta los botones con los metodos.
+    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
     public VentanaProyectos() {
 
         setTitle("Gestion de Proyectos");
@@ -39,8 +48,11 @@ public class VentanaProyectos extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         Lista.setEditable(false);
+        Lista.setLineWrap(false); // Una linea del listado corresponde a un registro.
 
-        TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Ciudad"}));
+
+        TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Ciudad", "Proveedor (codigo)", "Pieza (codigo)"}));
+
 
         mostrarTodos();
 
@@ -106,6 +118,12 @@ public class VentanaProyectos extends JFrame {
             public void mouseClicked(MouseEvent e) {
 
                 try {
+                    // El area vacia no debe seleccionar por error el ultimo proyecto.
+                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
+                    if (e.getY() >= altoLinea * proyectos.size()) {
+                        return;
+                    }
+
 
                     int posicion = Lista.viewToModel2D(e.getPoint());
 
@@ -125,6 +143,7 @@ public class VentanaProyectos extends JFrame {
     }
 
     // LEER LOS DATOS DEL FORMULARIO
+    // Creo un Proyecto con los tres JTextField y reviso que sea valido.
     private Proyecto leerProyecto() {
 
         String codigo = Codigo.getText().trim();
@@ -139,8 +158,11 @@ public class VentanaProyectos extends JFrame {
     }
 
     // AÑADIR PROYECTO
+    // Evito codigos repetidos con find() antes de hacer create().
     private void anadirProyecto() {
 
+        // try (...) cierra el EntityManager cuando termina la operacion,
+        // incluso si se produce un error que capturamos en catch.
         try (ProyectoDao dao = new ProyectoDao()) {
 
             Proyecto proyecto = leerProyecto();
@@ -165,6 +187,7 @@ public class VentanaProyectos extends JFrame {
     }
 
     // MODIFICAR PROYECTO
+    // Solo cambio nombre y ciudad de un proyecto que ya existe.
     private void modificarProyecto() {
 
         try (ProyectoDao dao = new ProyectoDao()) {
@@ -196,6 +219,7 @@ public class VentanaProyectos extends JFrame {
     }
 
     // ELIMINAR PROYECTO
+    // El DAO comprueba antes de eliminar que no tenga suministros.
     private void eliminarProyecto() {
 
         String codigo = Codigo.getText().trim();
@@ -235,10 +259,16 @@ public class VentanaProyectos extends JFrame {
         }
     }
 
-    // BUSCAR PROYECTO
+    // BUSCAR PROYECTOS
+    // La opcion del JComboBox decide que consulta JPQL ejecutar.
     private void buscarProyecto() {
 
         String texto = Buscar.getText().trim();
+
+        // Una busqueda nueva invalida la seleccion anterior, aunque
+        // el texto introducido sea incorrecto o la busqueda falle.
+        Codigo.setText("");
+        Codigo.setEditable(true);
 
         if (texto.isEmpty()) {
             mostrarTodos();
@@ -269,15 +299,31 @@ public class VentanaProyectos extends JFrame {
 
                 // BUSCAR POR CIUDAD
                 resultados = dao.buscarPorCiudad(texto);
+
+            } else if (opcion == 3) {
+
+                // BUSCAR POR PROVEEDOR
+                resultados = dao.buscarPorProveedor(texto);
+
+            } else if (opcion == 4) {
+
+                // BUSCAR POR PIEZA
+                resultados = dao.buscarPorPieza(texto);
             }
 
             mostrarLista(resultados);
+
+            if (resultados.isEmpty()) {
+
+                JOptionPane.showMessageDialog(this, "No se han encontrado proyectos");
+            }
 
         } catch (Exception e) {
 
             JOptionPane.showMessageDialog(this, "Error al buscar: " + e.getMessage());
         }
     }
+
 
     // MOSTRAR TODOS LOS PROYECTOS
     private void mostrarTodos() {
@@ -293,7 +339,17 @@ public class VentanaProyectos extends JFrame {
     }
 
     // MOSTRAR PROYECTOS EN LA LISTA
+    // Guarda el resultado en una lista y muestra cada objeto en una linea.
+    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
     private void mostrarLista(List<Proyecto> lista) {
+
+        // Al cambiar el listado, borro los datos del registro anterior.
+        // De esta manera no se modifica ni se elimina uno por accidente.
+        Codigo.setText("");
+        Nombre.setText("");
+        Ciudad.setText("");
+        Codigo.setEditable(true);
+
 
         proyectos = new ArrayList<>(lista);
 
@@ -309,6 +365,7 @@ public class VentanaProyectos extends JFrame {
     }
 
     // RELLENAR LOS CAMPOS
+    // Copia al formulario los datos del registro seleccionado para editarlo.
     private void rellenarCampos(Proyecto proyecto) {
 
         Codigo.setText(proyecto.getCodigo());
@@ -320,6 +377,7 @@ public class VentanaProyectos extends JFrame {
     }
 
     // LIMPIAR CAMPOS
+    // Deja el formulario preparado para introducir otro registro.
     private void limpiarCampos() {
 
         Codigo.setText("");

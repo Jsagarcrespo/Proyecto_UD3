@@ -1,0 +1,2375 @@
+--- original/src/main/java/org/example/App.java
++++ corregido/src/main/java/org/example/App.java
+@@ -1,4 +1,10 @@
+ package org.example;
++
++/*
++ * PUNTO DE ENTRADA DEL PROGRAMA
++ * main() abre la ventana principal de Swing.
++ * SwingUtilities.invokeLater() prepara la ventana en el hilo de Swing.
++ */
+ 
+ import org.example.VentanaPrincipal;
+ 
+--- original/src/main/java/org/example/Idao/IGestionDao.java
++++ corregido/src/main/java/org/example/Idao/IGestionDao.java
+@@ -4,6 +4,8 @@
+ 
+ import java.util.List;
+ 
++// La interfaz indica que consultas debe tener el DAO de gestiones.
++// No realiza consultas; solo declara los metodos que implementa la clase DAO.
+ public interface IGestionDao {
+ 
+     List<Gestion> listar();
+--- original/src/main/java/org/example/Idao/IPiezaDao.java
++++ corregido/src/main/java/org/example/Idao/IPiezaDao.java
+@@ -5,6 +5,8 @@
+ import java.math.BigDecimal;
+ import java.util.List;
+ 
++// La interfaz indica que consultas debe tener el DAO de piezas.
++// No realiza consultas; solo declara los metodos que implementa la clase DAO.
+ public interface IPiezaDao {
+ 
+     List<Pieza> listar();
+--- original/src/main/java/org/example/Idao/IProveedorDao.java
++++ corregido/src/main/java/org/example/Idao/IProveedorDao.java
+@@ -4,6 +4,8 @@
+ 
+ import java.util.List;
+ 
++// La interfaz indica que consultas debe tener el DAO de proveedores.
++// No realiza consultas; solo declara los metodos que implementa la clase DAO.
+ public interface IProveedorDao {
+ 
+     List<Proveedor> listar();
+--- original/src/main/java/org/example/Idao/IProyectoDao.java
++++ corregido/src/main/java/org/example/Idao/IProyectoDao.java
+@@ -4,6 +4,8 @@
+ 
+ import java.util.List;
+ 
++// La interfaz indica que consultas debe tener el DAO de proyectos.
++// No realiza consultas; solo declara los metodos que implementa la clase DAO.
+ public interface IProyectoDao {
+ 
+     List<Proyecto> listar();
+--- original/src/main/java/org/example/VentanaGestiones.java
++++ corregido/src/main/java/org/example/VentanaGestiones.java
+@@ -1,4 +1,11 @@
+ package org.example;
++
++/*
++ * VENTANA DE SUMINISTROS (GESTIONES)
++ * Cada gestion relaciona un proveedor, una pieza y un proyecto.
++ * Los tres JComboBox muestran registros que ya existen en la BD.
++ * El ID se genera en MariaDB/Hibernate, por eso no se escribe a mano.
++ */
+ 
+ import org.example.dao.GestionDao;
+ import org.example.dao.PiezaDao;
+@@ -42,6 +49,8 @@
+     private List<Proyecto> proyectos = new ArrayList<>();
+     private List<Gestion> gestiones = new ArrayList<>();
+ 
++    // El constructor prepara la ventana y conecta los botones con los metodos.
++    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
+     public VentanaGestiones() {
+ 
+         setTitle("Gestion de Suministros");
+@@ -52,6 +61,7 @@
+ 
+         IdGestion.setEditable(false);
+         Lista.setEditable(false);
++        Lista.setLineWrap(false); // Cada suministro se muestra en una sola linea.
+         Fecha.setText(LocalDate.now().toString());
+ 
+         TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"ID", "Proveedor", "Pieza", "Proyecto"}));
+@@ -119,6 +129,11 @@
+             @Override
+             public void mouseClicked(MouseEvent e) {
+                 try {
++                    // El espacio en blanco debajo de las gestiones no es un registro.
++                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
++                    if (e.getY() >= altoLinea * gestiones.size()) {
++                        return;
++                    }
+                     int posicion = Lista.viewToModel2D(e.getPoint());
+                     int linea = Lista.getLineOfOffset(posicion);
+ 
+@@ -133,8 +148,12 @@
+     }
+ 
+     // CARGAR LOS PROVEEDORES, PIEZAS Y PROYECTOS EN LOS COMBOBOX
++    // Llamo a listar() de los tres DAO y relleno los JComboBox.
++    // La opcion de indice 0 es un texto de ayuda, no un registro real.
+     private void cargarCombos() {
+ 
++        // try (...) cierra el EntityManager cuando termina la operacion,
++        // incluso si se produce un error que capturamos en catch.
+         try (ProveedorDao dao = new ProveedorDao()) {
+             proveedores = dao.listar();
+         }
+@@ -165,6 +184,9 @@
+     }
+ 
+     // LEER LOS DATOS DEL FORMULARIO
++    // Recojo fecha y cantidad, y compruebo los tres desplegables.
++    // Con EntityManager.find() recupero las entidades de ESTA sesion
++    // antes de crear la Gestion que vamos a guardar.
+     private Gestion leerGestion(GestionDao dao) {
+ 
+         if (ComboProveedores.getSelectedIndex() <= 0 || ComboPiezas.getSelectedIndex() <= 0 || ComboProyectos.getSelectedIndex() <= 0) {
+@@ -185,6 +207,8 @@
+             throw new IllegalArgumentException("La cantidad debe ser un numero entero");
+         }
+ 
++        // Restamos 1 porque el indice 0 contiene "Selecciona un...".
++        // Las listas Java empiezan en indice 0, pero los datos del combo en 1.
+         Proveedor seleccionadoProveedor = proveedores.get(ComboProveedores.getSelectedIndex() - 1);
+         Pieza seleccionadaPieza = piezas.get(ComboPiezas.getSelectedIndex() - 1);
+         Proyecto seleccionadoProyecto = proyectos.get(ComboProyectos.getSelectedIndex() - 1);
+@@ -194,12 +218,20 @@
+         Pieza pieza = dao.getEntityManager().find(Pieza.class, seleccionadaPieza.getCodigo());
+         Proyecto proyecto = dao.getEntityManager().find(Proyecto.class, seleccionadoProyecto.getCodigo());
+ 
++        // Si se ha borrado alguno de estos registros desde otra ventana,
++        // find() devolvera null. Avisamos para que se pulse Mostrar todos.
++        if (proveedor == null || pieza == null || proyecto == null) {
++            throw new IllegalArgumentException(
++                    "Falta un proveedor, una pieza o un proyecto. Pulsa Mostrar todos");
++        }
++
+         Gestion gestion = new Gestion(fecha, cantidad, proveedor, pieza, proyecto);
+         gestion.validar();
+         return gestion;
+     }
+ 
+     // AÑADIR
++    // Creo una Gestion nueva; Hibernate asignara automaticamente su ID.
+     private void anadirGestion() {
+ 
+         try (GestionDao dao = new GestionDao()) {
+@@ -216,6 +248,7 @@
+     }
+ 
+     // MODIFICAR
++    // Busco la Gestion por su ID, leo los datos y actualizo sus campos.
+     private void modificarGestion() {
+ 
+         if (IdGestion.getText().isEmpty()) {
+@@ -251,6 +284,7 @@
+     }
+ 
+     // ELIMINAR
++    // Confirmo y elimino la Gestion. Despues se pueden borrar sus padres.
+     private void eliminarGestion() {
+ 
+         if (IdGestion.getText().isEmpty()) {
+@@ -285,6 +319,7 @@
+     }
+ 
+     // BUSCAR POR ID O POR CODIGO DE LAS ENTIDADES
++    // Busca una gestion por su ID o por el codigo de alguna entidad asociada.
+     private void buscarGestion() {
+ 
+         String texto = Buscar.getText().trim();
+@@ -293,6 +328,9 @@
+             mostrarTodos();
+             return;
+         }
++
++        // Si la nueva busqueda falla, no conservamos el ID del suministro anterior.
++        IdGestion.setText("");
+ 
+         try (GestionDao dao = new GestionDao()) {
+             List<Gestion> resultados = new ArrayList<>();
+@@ -313,6 +351,9 @@
+             }
+ 
+             mostrarLista(resultados);
++            if (resultados.isEmpty()) {
++                JOptionPane.showMessageDialog(this, "No se han encontrado suministros");
++            }
+ 
+         } catch (NumberFormatException e) {
+             JOptionPane.showMessageDialog(this, "El ID debe ser un numero entero");
+@@ -335,9 +376,9 @@
+         }
+     }
+ 
+-    // ESCRIBIR LA LISTA EN PANTALLA
+-
+     // MOSTRAR LOS SUMINISTROS EN PANTALLA
++    // Guarda el resultado en una lista y muestra cada objeto en una linea.
++    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
+     private void mostrarLista(List<Gestion> lista) {
+ 
+         // Quitar la seleccion anterior
+@@ -345,9 +386,10 @@
+         Fecha.setText(LocalDate.now().toString());
+         Cantidad.setText("");
+ 
+-        ComboProveedores.setSelectedIndex(0);
+-        ComboPiezas.setSelectedIndex(0);
+-        ComboProyectos.setSelectedIndex(0);
++        // Tras un error de conexion, un combo podria no tener elementos.
++        if (ComboProveedores.getItemCount() > 0) ComboProveedores.setSelectedIndex(0);
++        if (ComboPiezas.getItemCount() > 0) ComboPiezas.setSelectedIndex(0);
++        if (ComboProyectos.getItemCount() > 0) ComboProyectos.setSelectedIndex(0);
+ 
+         gestiones = new ArrayList<>(lista);
+ 
+@@ -364,6 +406,7 @@
+ 
+ 
+     // RELLENAR LOS CAMPOS AL ELEGIR UNA LINEA
++    // Copia al formulario los datos del registro seleccionado para editarlo.
+     private void rellenarCampos(Gestion gestion) {
+ 
+         IdGestion.setText(String.valueOf(gestion.getId()));
+@@ -393,6 +436,7 @@
+     }
+ 
+     // LIMPIAR
++    // Deja el formulario preparado para introducir otro registro.
+     private void limpiarCampos() {
+ 
+         IdGestion.setText("");
+@@ -400,9 +444,10 @@
+         Cantidad.setText("");
+         Buscar.setText("");
+ 
+-        ComboProveedores.setSelectedIndex(0);
+-        ComboPiezas.setSelectedIndex(0);
+-        ComboProyectos.setSelectedIndex(0);
+-        TipoBusqueda.setSelectedIndex(0);
++        // Tras un error de conexion, un combo podria no tener elementos.
++        if (ComboProveedores.getItemCount() > 0) ComboProveedores.setSelectedIndex(0);
++        if (ComboPiezas.getItemCount() > 0) ComboPiezas.setSelectedIndex(0);
++        if (ComboProyectos.getItemCount() > 0) ComboProyectos.setSelectedIndex(0);
++        if (TipoBusqueda.getItemCount() > 0) TipoBusqueda.setSelectedIndex(0);
+     }
+ }
+--- original/src/main/java/org/example/VentanaPiezas.java
++++ corregido/src/main/java/org/example/VentanaPiezas.java
+@@ -1,4 +1,11 @@
+ package org.example;
++
++/*
++ * VENTANA DE PIEZAS
++ * Permite anadir, modificar, eliminar, buscar y listar piezas.
++ * El precio se lee como texto y se convierte a BigDecimal.
++ * Los datos se guardan mediante PiezaDao; la ventana no escribe SQL.
++ */
+ 
+ import org.example.dao.PiezaDao;
+ import org.example.modelos.Pieza;
+@@ -30,6 +37,8 @@
+ 
+     private List<Pieza> piezas = new ArrayList<>();
+ 
++    // El constructor prepara la ventana y conecta los botones con los metodos.
++    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
+     public VentanaPiezas() {
+ 
+         setTitle("Gestion de Piezas");
+@@ -39,6 +48,7 @@
+         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+ 
+         Lista.setEditable(false);
++        Lista.setLineWrap(false); // Una linea del listado corresponde a un registro.
+ 
+         TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Precio entre", "Proveedor (codigo)", "Proyecto (codigo)"}));
+ 
+@@ -99,6 +109,12 @@
+             @Override
+             public void mouseClicked(MouseEvent e) {
+                 try {
++                    // No seleccionar el ultimo registro si pulsamos debajo del listado.
++                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
++                    if (e.getY() >= altoLinea * piezas.size()) {
++                        return;
++                    }
++
+                     int posicion = Lista.viewToModel2D(e.getPoint());
+                     int linea = Lista.getLineOfOffset(posicion);
+ 
+@@ -113,6 +129,8 @@
+     }
+ 
+     // RECOGER LOS DATOS DE LAS CAJAS DE TEXTO
++    // Convierto el precio introducido en un BigDecimal, no en double.
++    // Asi trabajamos con importes decimales sin errores de redondeo binario.
+     private Pieza leerPieza() {
+ 
+         String codigo = Codigo.getText().trim();
+@@ -141,7 +159,10 @@
+     }
+ 
+     // AÑADIR
++    // Valido los campos, compruebo que el codigo sea nuevo y guardo.
+     private void anadirPieza() {
++        // try (...) cierra el EntityManager cuando termina la operacion,
++        // incluso si se produce un error que capturamos en catch.
+         try (PiezaDao dao = new PiezaDao()) {
+             Pieza pieza = leerPieza();
+ 
+@@ -161,6 +182,7 @@
+     }
+ 
+     // MODIFICAR
++    // Recupero la pieza existente y actualizo nombre, precio y descripcion.
+     private void modificarPieza() {
+         try (PiezaDao dao = new PiezaDao()) {
+             Pieza datos = leerPieza();
+@@ -186,6 +208,7 @@
+     }
+ 
+     // ELIMINAR
++    // Compruebo que el usuario confirme y que la pieza no tenga gestiones.
+     private void eliminarPieza() {
+         String codigo = Codigo.getText().trim();
+ 
+@@ -217,12 +240,17 @@
+         }
+     }
+ 
+-    // BUSCAR POR CODIGO O NOMBRE
+-
+     // BUSCAR PIEZAS
++    // Permite buscar por codigo, nombre, intervalo de precios,
++    // proveedor o proyecto. El intervalo se escribe por ejemplo 10;50.
+     private void buscarPieza() {
+ 
+         String texto = Buscar.getText().trim();
++
++        // Una busqueda nueva invalida la seleccion anterior, aunque
++        // el texto introducido sea incorrecto o la busqueda falle.
++        Codigo.setText("");
++        Codigo.setEditable(true);
+ 
+         if (texto.isEmpty()) {
+             mostrarTodos();
+@@ -312,7 +340,18 @@
+     }
+ 
+     // MOSTRAR LISTADO
++    // Guarda el resultado en una lista y muestra cada objeto en una linea.
++    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
+     private void mostrarLista(List<Pieza> lista) {
++
++        // Al cambiar el listado, borro los datos del registro anterior.
++        // De esta manera no se modifica ni se elimina uno por accidente.
++        Codigo.setText("");
++        Nombre.setText("");
++        Precio.setText("");
++        Descripcion.setText("");
++        Codigo.setEditable(true);
++
+         piezas = new ArrayList<>(lista);
+         String texto = "";
+ 
+@@ -325,6 +364,7 @@
+     }
+ 
+     // CARGAR LA PIEZA SELECCIONADA
++    // Copia al formulario los datos del registro seleccionado para editarlo.
+     private void rellenarCampos(Pieza pieza) {
+         Codigo.setText(pieza.getCodigo());
+         Nombre.setText(pieza.getNombre());
+@@ -334,6 +374,7 @@
+     }
+ 
+     // LIMPIAR
++    // Deja el formulario preparado para introducir otro registro.
+     private void limpiarCampos() {
+         Codigo.setText("");
+         Nombre.setText("");
+--- original/src/main/java/org/example/VentanaPrincipal.java
++++ corregido/src/main/java/org/example/VentanaPrincipal.java
+@@ -1,4 +1,10 @@
+ package org.example;
++
++/*
++ * VENTANA PRINCIPAL DE LA APLICACION
++ * Es el menu visual: desde sus botones se abren las cuatro ventanas.
++ * No trabaja con la base de datos directamente; eso se hace en los DAO.
++ */
+ 
+ import javax.swing.*;
+ import java.awt.event.ActionEvent;
+--- original/src/main/java/org/example/VentanaProvedores.java
++++ corregido/src/main/java/org/example/VentanaProvedores.java
+@@ -1,4 +1,11 @@
+ package org.example;
++
++/*
++ * VENTANA DE PROVEEDORES
++ * Los JTextField recogen datos y el JTextArea muestra la lista.
++ * Los botones llaman a metodos de esta clase, como en la UD2.
++ * ProveedorDao se encarga de consultar y guardar con Hibernate.
++ */
+ 
+ import org.example.dao.ProveedorDao;
+ import org.example.modelos.Proveedor;
+@@ -29,6 +36,8 @@
+ 
+     private List<Proveedor> proveedores = new ArrayList<>();
+ 
++    // El constructor prepara la ventana y conecta los botones con los metodos.
++    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
+     public VentanaProvedores() {
+ 
+         setTitle("Gestion de Proveedores");
+@@ -38,6 +47,7 @@
+         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+ 
+         Lista.setEditable(false);
++        Lista.setLineWrap(false); // Una linea del listado corresponde a un registro.
+ 
+         TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Apellidos", "Direccion", "Pieza suministrada"}));
+ 
+@@ -97,6 +107,12 @@
+             @Override
+             public void mouseClicked(MouseEvent e) {
+                 try {
++                    // No seleccionar el ultimo registro si pulsamos debajo del listado.
++                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
++                    if (e.getY() >= altoLinea * proveedores.size()) {
++                        return;
++                    }
++
+                     int posicion = Lista.viewToModel2D(e.getPoint());
+                     int linea = Lista.getLineOfOffset(posicion);
+                     if (linea >= 0 && linea < proveedores.size()) {
+@@ -109,13 +125,19 @@
+         });
+     }
+ 
++    // Lee los cuatro JTextField, crea un Proveedor temporal y valida
++    // que no falten campos antes de guardar nada en MariaDB.
+     private Proveedor leerProveedor() {
+         Proveedor proveedor = new Proveedor(Codigo.getText().trim(), Nombre.getText().trim(), Apellidos.getText().trim(), Direccion.getText().trim());
+         proveedor.validar();
+         return proveedor;
+     }
+ 
++    // Primero compruebo que ese codigo no exista; despues hago dao.create().
++    // El try/catch muestra el error al usuario sin cerrar la ventana.
+     private void anadirProveedor() {
++        // try (...) cierra el EntityManager cuando termina la operacion,
++        // incluso si se produce un error que capturamos en catch.
+         try (ProveedorDao dao = new ProveedorDao()) {
+             Proveedor proveedor = leerProveedor();
+             if (dao.find(proveedor.getCodigo()) != null) {
+@@ -131,13 +153,24 @@
+         }
+     }
+ 
++    // Busco el Proveedor original con find() y cambio solo sus datos.
++    // No cambio el codigo ni sus relaciones con las gestiones.
+     private void modificarProveedor() {
+         try (ProveedorDao dao = new ProveedorDao()) {
+-            Proveedor proveedor = leerProveedor();
+-            if (dao.find(proveedor.getCodigo()) == null) {
++            // Leo los datos escritos por el usuario.
++            Proveedor datos = leerProveedor();
++
++            // Busco el proveedor que ya esta guardado.
++            // Asi solo modifico los campos editables, sin tocar sus suministros.
++            Proveedor proveedor = dao.find(datos.getCodigo());
++            if (proveedor == null) {
+                 JOptionPane.showMessageDialog(this, "El proveedor no existe");
+                 return;
+             }
++
++            proveedor.setNombre(datos.getNombre());
++            proveedor.setApellidos(datos.getApellidos());
++            proveedor.setDireccion(datos.getDireccion());
+             dao.update(proveedor);
+             JOptionPane.showMessageDialog(this, "Proveedor modificado");
+             limpiarCampos();
+@@ -147,6 +180,8 @@
+         }
+     }
+ 
++    // Pido confirmacion antes de borrar. ProveedorDao revisa que
++    // no haya suministros asociados y, si existen, impide el borrado.
+     private void eliminarProveedor() {
+         String codigo = Codigo.getText().trim();
+         if (codigo.isEmpty()) {
+@@ -176,9 +211,16 @@
+ 
+ 
+     // BUSCAR PROVEEDORES
++    // Segun el JComboBox, elijo una busqueda distinta en el DAO.
++    // La busqueda por pieza usa JOIN, porque consulta las gestiones.
+     private void buscarProveedor() {
+ 
+         String texto = Buscar.getText().trim();
++
++        // Una busqueda nueva invalida la seleccion anterior, aunque
++        // el texto introducido sea incorrecto o la busqueda falle.
++        Codigo.setText("");
++        Codigo.setEditable(true);
+ 
+         if (texto.isEmpty()) {
+             mostrarTodos();
+@@ -238,7 +280,18 @@
+         }
+     }
+ 
++    // Guarda el resultado en una lista y muestra cada objeto en una linea.
++    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
+     private void mostrarLista(List<Proveedor> lista) {
++
++        // Al cambiar el listado, borro los datos del registro anterior.
++        // De esta manera no se modifica ni se elimina uno por accidente.
++        Codigo.setText("");
++        Nombre.setText("");
++        Apellidos.setText("");
++        Direccion.setText("");
++        Codigo.setEditable(true);
++
+         proveedores = new ArrayList<>(lista);
+         String texto = "";
+         for (Proveedor p : proveedores) {
+@@ -248,6 +301,7 @@
+         Lista.setCaretPosition(0);
+     }
+ 
++    // Copia al formulario los datos del registro seleccionado para editarlo.
+     private void rellenarCampos(Proveedor proveedor) {
+         Codigo.setText(proveedor.getCodigo());
+         Nombre.setText(proveedor.getNombre());
+@@ -256,6 +310,7 @@
+         Codigo.setEditable(false);
+     }
+ 
++    // Deja el formulario preparado para introducir otro registro.
+     private void limpiarCampos() {
+         Codigo.setText("");
+         Nombre.setText("");
+--- original/src/main/java/org/example/VentanaProyectos.java
++++ corregido/src/main/java/org/example/VentanaProyectos.java
+@@ -1,4 +1,11 @@
+ package org.example;
++
++/*
++ * VENTANA DE PROYECTOS
++ * Hace las mismas operaciones que la de proveedores, pero sobre Proyecto.
++ * Utiliza JTextField, JComboBox, JTextArea y botones Swing.
++ * Las consultas JPQL estan en ProyectoDao.
++ */
+ 
+ import org.example.dao.ProyectoDao;
+ import org.example.modelos.Proyecto;
+@@ -30,6 +37,8 @@
+ 
+     private List<Proyecto> proyectos = new ArrayList<>();
+ 
++    // El constructor prepara la ventana y conecta los botones con los metodos.
++    // Cada ActionListener se ejecuta cuando el usuario pulsa su boton.
+     public VentanaProyectos() {
+ 
+         setTitle("Gestion de Proyectos");
+@@ -39,6 +48,7 @@
+         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+ 
+         Lista.setEditable(false);
++        Lista.setLineWrap(false); // Una linea del listado corresponde a un registro.
+ 
+ 
+         TipoBusqueda.setModel(new DefaultComboBoxModel<>(new String[]{"Codigo", "Nombre", "Ciudad", "Proveedor (codigo)", "Pieza (codigo)"}));
+@@ -108,6 +118,12 @@
+             public void mouseClicked(MouseEvent e) {
+ 
+                 try {
++                    // El area vacia no debe seleccionar por error el ultimo proyecto.
++                    int altoLinea = Lista.getFontMetrics(Lista.getFont()).getHeight();
++                    if (e.getY() >= altoLinea * proyectos.size()) {
++                        return;
++                    }
++
+ 
+                     int posicion = Lista.viewToModel2D(e.getPoint());
+ 
+@@ -127,6 +143,7 @@
+     }
+ 
+     // LEER LOS DATOS DEL FORMULARIO
++    // Creo un Proyecto con los tres JTextField y reviso que sea valido.
+     private Proyecto leerProyecto() {
+ 
+         String codigo = Codigo.getText().trim();
+@@ -141,8 +158,11 @@
+     }
+ 
+     // AÑADIR PROYECTO
++    // Evito codigos repetidos con find() antes de hacer create().
+     private void anadirProyecto() {
+ 
++        // try (...) cierra el EntityManager cuando termina la operacion,
++        // incluso si se produce un error que capturamos en catch.
+         try (ProyectoDao dao = new ProyectoDao()) {
+ 
+             Proyecto proyecto = leerProyecto();
+@@ -167,6 +187,7 @@
+     }
+ 
+     // MODIFICAR PROYECTO
++    // Solo cambio nombre y ciudad de un proyecto que ya existe.
+     private void modificarProyecto() {
+ 
+         try (ProyectoDao dao = new ProyectoDao()) {
+@@ -198,6 +219,7 @@
+     }
+ 
+     // ELIMINAR PROYECTO
++    // El DAO comprueba antes de eliminar que no tenga suministros.
+     private void eliminarProyecto() {
+ 
+         String codigo = Codigo.getText().trim();
+@@ -237,12 +259,16 @@
+         }
+     }
+ 
+-    // BUSCAR PROYECTO
+-
+     // BUSCAR PROYECTOS
++    // La opcion del JComboBox decide que consulta JPQL ejecutar.
+     private void buscarProyecto() {
+ 
+         String texto = Buscar.getText().trim();
++
++        // Una busqueda nueva invalida la seleccion anterior, aunque
++        // el texto introducido sea incorrecto o la busqueda falle.
++        Codigo.setText("");
++        Codigo.setEditable(true);
+ 
+         if (texto.isEmpty()) {
+             mostrarTodos();
+@@ -313,7 +339,17 @@
+     }
+ 
+     // MOSTRAR PROYECTOS EN LA LISTA
++    // Guarda el resultado en una lista y muestra cada objeto en una linea.
++    // La lista tambien sirve para saber que objeto se ha pulsado con el raton.
+     private void mostrarLista(List<Proyecto> lista) {
++
++        // Al cambiar el listado, borro los datos del registro anterior.
++        // De esta manera no se modifica ni se elimina uno por accidente.
++        Codigo.setText("");
++        Nombre.setText("");
++        Ciudad.setText("");
++        Codigo.setEditable(true);
++
+ 
+         proyectos = new ArrayList<>(lista);
+ 
+@@ -329,6 +365,7 @@
+     }
+ 
+     // RELLENAR LOS CAMPOS
++    // Copia al formulario los datos del registro seleccionado para editarlo.
+     private void rellenarCampos(Proyecto proyecto) {
+ 
+         Codigo.setText(proyecto.getCodigo());
+@@ -340,6 +377,7 @@
+     }
+ 
+     // LIMPIAR CAMPOS
++    // Deja el formulario preparado para introducir otro registro.
+     private void limpiarCampos() {
+ 
+         Codigo.setText("");
+--- original/src/main/java/org/example/dao/GestionDao.java
++++ corregido/src/main/java/org/example/dao/GestionDao.java
+@@ -1,4 +1,10 @@
+ package org.example.dao;
++
++/*
++ * DAO DE GESTIONES
++ * Guarda los suministros y permite buscarlos por proveedor, pieza o proyecto.
++ * En JPQL escribimos los nombres de las clases y de sus atributos Java.
++ */
+ 
+ import org.example.Idao.IGestionDao;
+ import org.example.modelos.Gestion;
+@@ -10,6 +16,7 @@
+ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
+ 
+     // BUSCAR POR ID
++    // find() busca por clave primaria y devuelve null si no existe.
+     @Override
+     public Gestion find(Integer id) {
+ 
+@@ -17,6 +24,7 @@
+     }
+ 
+     // CREAR
++    // Antes de guardar validamos el objeto; super.create() realiza persist y commit.
+     @Override
+     public Gestion create(Gestion gestion) {
+ 
+@@ -25,6 +33,7 @@
+     }
+ 
+     // MODIFICAR
++    // Valido y dejo que el DAO generico haga merge y confirme los cambios.
+     @Override
+     public Gestion update(Gestion gestion) {
+ 
+@@ -33,6 +42,7 @@
+     }
+ 
+     // LISTAR TODAS LAS GESTIONES
++    // SELECT FROM devuelve objetos de la entidad, ordenados para mostrarlos.
+     @Override
+     public List<Gestion> listar() {
+ 
+@@ -44,6 +54,7 @@
+     }
+ 
+     // BUSCAR POR PROVEEDOR
++    // La consulta utiliza la relacion con Gestion para filtrar por proveedor.
+     @Override
+     public List<Gestion> buscarPorProveedor(String codigo) {
+ 
+@@ -57,6 +68,7 @@
+     }
+ 
+     // BUSCAR POR PIEZA
++    // JOIN une la entidad con sus gestiones para consultar piezas relacionadas.
+     @Override
+     public List<Gestion> buscarPorPieza(String codigo) {
+ 
+@@ -70,6 +82,7 @@
+     }
+ 
+     // BUSCAR POR PROYECTO
++    // La consulta utiliza la relacion con Gestion para filtrar por proyecto.
+     @Override
+     public List<Gestion> buscarPorProyecto(String codigo) {
+ 
+--- original/src/main/java/org/example/dao/PiezaDao.java
++++ corregido/src/main/java/org/example/dao/PiezaDao.java
+@@ -1,7 +1,12 @@
+ package org.example.dao;
+ 
++/*
++ * DAO DE PIEZAS
++ * Utiliza JPQL para las busquedas y la clase dao para guardar cambios.
++ * Antes de borrar una pieza comprueba si tiene suministros asociados.
++ */
++
+ import org.example.Idao.IPiezaDao;
+-import org.example.dao.PiezaDao;
+ import org.example.modelos.Pieza;
+ 
+ import jakarta.persistence.TypedQuery;
+@@ -12,6 +17,7 @@
+ public class PiezaDao extends dao<Pieza, String> implements IPiezaDao {
+ 
+     // BUSCAR POR CODIGO
++    // find() busca por clave primaria y devuelve null si no existe.
+     @Override
+     public Pieza find(String codigo) {
+ 
+@@ -19,6 +25,7 @@
+     }
+ 
+     // AÑADIR
++    // Antes de guardar validamos el objeto; super.create() realiza persist y commit.
+     @Override
+     public Pieza create(Pieza pieza) {
+ 
+@@ -28,6 +35,7 @@
+     }
+ 
+     // MODIFICAR
++    // Valido y dejo que el DAO generico haga merge y confirme los cambios.
+     @Override
+     public Pieza update(Pieza pieza) {
+ 
+@@ -37,6 +45,7 @@
+     }
+ 
+     // ELIMINAR
++    // Primero cuento las gestiones relacionadas con JPQL; no borro si hay alguna.
+     @Override
+     public void delete(Pieza pieza) {
+ 
+@@ -57,6 +66,7 @@
+     }
+ 
+     // MOSTRAR TODAS
++    // SELECT FROM devuelve objetos de la entidad, ordenados para mostrarlos.
+     @Override
+     public List<Pieza> listar() {
+ 
+@@ -68,6 +78,7 @@
+     }
+ 
+     // BUSCAR POR NOMBRE
++    // LIKE permite encontrar coincidencias aunque no escribamos el nombre completo.
+     @Override
+     public List<Pieza> buscarPorNombre(String nombre) {
+ 
+@@ -81,6 +92,7 @@
+     }
+ 
+     // BUSCAR POR PRECIO
++    // BETWEEN filtra piezas entre dos precios, incluidos los limites.
+     @Override
+     public List<Pieza> buscarPorPrecio(BigDecimal minimo, BigDecimal maximo) {
+ 
+@@ -95,6 +107,7 @@
+     }
+ 
+     // BUSCAR PIEZAS POR PROVEEDOR
++    // La consulta utiliza la relacion con Gestion para filtrar por proveedor.
+     @Override
+     public List<Pieza> buscarPorProveedor(String codigo) {
+ 
+@@ -108,6 +121,7 @@
+     }
+ 
+     // BUSCAR PIEZAS POR PROYECTO
++    // La consulta utiliza la relacion con Gestion para filtrar por proyecto.
+     @Override
+     public List<Pieza> buscarPorProyecto(String codigo) {
+ 
+--- original/src/main/java/org/example/dao/ProveedorDao.java
++++ corregido/src/main/java/org/example/dao/ProveedorDao.java
+@@ -1,4 +1,10 @@
+ package org.example.dao;
++
++/*
++ * DAO DE PROVEEDORES
++ * Hereda las operaciones generales de dao y anade las consultas JPQL.
++ * TypedQuery devuelve objetos Proveedor, no filas SQL sueltas.
++ */
+ 
+ import org.example.Idao.IProveedorDao;
+ import org.example.modelos.Proveedor;
+@@ -10,6 +16,7 @@
+ public class ProveedorDao extends dao<Proveedor, String> implements IProveedorDao {
+ 
+     // BUSCAR POR CODIGO
++    // find() busca por clave primaria y devuelve null si no existe.
+     @Override
+     public Proveedor find(String codigo) {
+ 
+@@ -17,6 +24,7 @@
+     }
+ 
+     // CREAR
++    // Antes de guardar validamos el objeto; super.create() realiza persist y commit.
+     @Override
+     public Proveedor create(Proveedor proveedor) {
+ 
+@@ -26,6 +34,7 @@
+     }
+ 
+     // MODIFICAR
++    // Valido y dejo que el DAO generico haga merge y confirme los cambios.
+     @Override
+     public Proveedor update(Proveedor proveedor) {
+ 
+@@ -35,6 +44,7 @@
+     }
+ 
+     // LISTAR TODOS
++    // SELECT FROM devuelve objetos de la entidad, ordenados para mostrarlos.
+     @Override
+     public List<Proveedor> listar() {
+ 
+@@ -46,6 +56,7 @@
+     }
+ 
+     // BUSCAR POR NOMBRE
++    // LIKE permite encontrar coincidencias aunque no escribamos el nombre completo.
+     @Override
+     public List<Proveedor> buscarPorNombre(String nombre) {
+ 
+@@ -59,6 +70,7 @@
+     }
+ 
+     // BUSCAR POR APELLIDOS
++    // Busco un apellido mediante JPQL, ignorando mayusculas y minusculas.
+     @Override
+     public List<Proveedor> buscarPorApellidos(String apellidos) {
+ 
+@@ -72,6 +84,7 @@
+     }
+ 
+     // BUSCAR POR DIRECCION
++    // Busco parte de la direccion usando LIKE y un parametro.
+     @Override
+     public List<Proveedor> buscarPorDireccion(String direccion) {
+ 
+@@ -85,6 +98,7 @@
+     }
+ 
+     // BUSCAR POR PIEZA SUMINISTRADA
++    // JOIN une la entidad con sus gestiones para consultar piezas relacionadas.
+     @Override
+     public List<Proveedor> buscarPorPieza(String pieza) {
+ 
+@@ -98,6 +112,7 @@
+     }
+ 
+     // ELIMINAR
++    // Primero cuento las gestiones relacionadas con JPQL; no borro si hay alguna.
+     @Override
+     public void delete(Proveedor proveedor) {
+ 
+--- original/src/main/java/org/example/dao/ProyectoDao.java
++++ corregido/src/main/java/org/example/dao/ProyectoDao.java
+@@ -1,7 +1,12 @@
+ package org.example.dao;
+ 
++/*
++ * DAO DE PROYECTOS
++ * Permite buscar por codigo, nombre, ciudad, proveedor y pieza.
++ * Las relaciones se consultan mediante JOIN con la lista gestiones.
++ */
++
+ import org.example.Idao.IProyectoDao;
+-import org.example.dao.ProyectoDao;
+ import org.example.modelos.Proyecto;
+ 
+ import jakarta.persistence.TypedQuery;
+@@ -11,6 +16,7 @@
+ public class ProyectoDao extends dao<Proyecto, String> implements IProyectoDao {
+ 
+     // BUSCAR POR CODIGO
++    // find() busca por clave primaria y devuelve null si no existe.
+     @Override
+     public Proyecto find(String codigo) {
+ 
+@@ -18,6 +24,7 @@
+     }
+ 
+     // AÑADIR
++    // Antes de guardar validamos el objeto; super.create() realiza persist y commit.
+     @Override
+     public Proyecto create(Proyecto proyecto) {
+ 
+@@ -27,6 +34,7 @@
+     }
+ 
+     // MODIFICAR
++    // Valido y dejo que el DAO generico haga merge y confirme los cambios.
+     @Override
+     public Proyecto update(Proyecto proyecto) {
+ 
+@@ -36,6 +44,7 @@
+     }
+ 
+     // ELIMINAR
++    // Primero cuento las gestiones relacionadas con JPQL; no borro si hay alguna.
+     @Override
+     public void delete(Proyecto proyecto) {
+ 
+@@ -56,6 +65,7 @@
+     }
+ 
+     // MOSTRAR TODOS
++    // SELECT FROM devuelve objetos de la entidad, ordenados para mostrarlos.
+     @Override
+     public List<Proyecto> listar() {
+ 
+@@ -67,6 +77,7 @@
+     }
+ 
+     // BUSCAR POR NOMBRE
++    // LIKE permite encontrar coincidencias aunque no escribamos el nombre completo.
+     @Override
+     public List<Proyecto> buscarPorNombre(String nombre) {
+ 
+@@ -80,6 +91,7 @@
+     }
+ 
+     // BUSCAR POR CIUDAD
++    // LIKE permite buscar un proyecto escribiendo parte de la ciudad.
+     @Override
+     public List<Proyecto> buscarPorCiudad(String ciudad) {
+ 
+@@ -93,6 +105,7 @@
+     }
+ 
+     // BUSCAR PROYECTOS POR PROVEEDOR
++    // La consulta utiliza la relacion con Gestion para filtrar por proveedor.
+     @Override
+     public List<Proyecto> buscarPorProveedor(String codigo) {
+ 
+@@ -106,6 +119,7 @@
+     }
+ 
+     // BUSCAR PROYECTOS POR PIEZA
++    // JOIN une la entidad con sus gestiones para consultar piezas relacionadas.
+     @Override
+     public List<Proyecto> buscarPorPieza(String codigo) {
+ 
+--- original/src/main/java/org/example/dao/dao.java
++++ corregido/src/main/java/org/example/dao/dao.java
+@@ -1,4 +1,12 @@
+ package org.example.dao;
++
++/*
++ * DAO GENERICO - BASADO EN EL DAO DE LA PRACTICA 4.01
++ * Esta clase contiene las operaciones comunes: crear, modificar y eliminar.
++ * EntityManager permite hablar con Hibernate; las transacciones agrupan
++ * los cambios para confirmarlos (commit) o deshacerlos (rollback).
++ * Mantenemos el nombre dao en minusculas, como en el proyecto entregado.
++ */
+ 
+ import jakarta.persistence.EntityManager;
+ import jakarta.persistence.EntityManagerFactory;
+@@ -8,10 +16,15 @@
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+ 
++// T es el tipo de objeto (Proveedor, Pieza, Proyecto o Gestion).
++// K es el tipo de su clave primaria (String o Integer).
++// AutoCloseable permite usar try (ProveedorDao dao = new ProveedorDao()).
+ public abstract class dao<T, K> implements AutoCloseable {
+ 
++    // La fabrica abre EntityManager para los DAO. Se crea una sola vez.
+     private static final EntityManagerFactory fabrica = Persistence.createEntityManagerFactory("default");
+ 
++    // Cada DAO trabaja con su propio EntityManager (sesion con Hibernate).
+     protected EntityManager em = fabrica.createEntityManager();
+ 
+     // LOGGER
+@@ -29,8 +42,10 @@
+         EntityTransaction transaccion = em.getTransaction();
+ 
+         try {
++            // Comienza la transaccion: aun no se han confirmado los cambios.
+             transaccion.begin();
+             em.persist(objeto);
++            // Confirma la operacion en la base de datos.
+             transaccion.commit();
+ 
+             // GUARDAR MENSAJE
+@@ -41,6 +56,7 @@
+         } catch (RuntimeException e) {
+ 
+             if (transaccion.isActive()) {
++                // Si hay un fallo, deshago los cambios pendientes.
+                 transaccion.rollback();
+             }
+ 
+@@ -57,10 +73,12 @@
+         EntityTransaction transaccion = em.getTransaction();
+ 
+         try {
++            // Comienza la transaccion: aun no se han confirmado los cambios.
+             transaccion.begin();
+ 
+             T actualizado = em.merge(objeto);
+ 
++            // Confirma la operacion en la base de datos.
+             transaccion.commit();
+ 
+             // GUARDAR MENSAJE
+@@ -71,6 +89,7 @@
+         } catch (RuntimeException e) {
+ 
+             if (transaccion.isActive()) {
++                // Si hay un fallo, deshago los cambios pendientes.
+                 transaccion.rollback();
+             }
+ 
+@@ -87,12 +106,20 @@
+         EntityTransaction transaccion = em.getTransaction();
+ 
+         try {
++            // Comienza la transaccion: aun no se han confirmado los cambios.
+             transaccion.begin();
+ 
+-            T entidad = em.contains(objeto) ? objeto : em.merge(objeto);
++            // remove() necesita una entidad gestionada por este EntityManager.
++            T entidad;
++            if (em.contains(objeto)) {
++                entidad = objeto;
++            } else {
++                entidad = em.merge(objeto);
++            }
+ 
+             em.remove(entidad);
+ 
++            // Confirma la operacion en la base de datos.
+             transaccion.commit();
+ 
+             // GUARDAR MENSAJE
+@@ -101,6 +128,7 @@
+         } catch (RuntimeException e) {
+ 
+             if (transaccion.isActive()) {
++                // Si hay un fallo, deshago los cambios pendientes.
+                 transaccion.rollback();
+             }
+ 
+--- original/src/main/java/org/example/modelos/Gestion.java
++++ corregido/src/main/java/org/example/modelos/Gestion.java
+@@ -4,11 +4,18 @@
+ 
+ import java.time.LocalDate;
+ 
++/*
++ * ENTIDAD JPA: GESTION
++ * @Entity indica que Hibernate guardara los objetos de esta clase en una tabla.
++ * Los getters y setters sirven para leer y modificar los atributos Java.
++ */
+ @Entity
+ @Table(name = "gestiones")
+ public class Gestion {
+ 
++    // @Id marca la clave primaria que identifica cada registro.
+     @Id
++    // IDENTITY: MariaDB genera el numero cuando se inserta la gestion.
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+     private Integer id;
+ 
+@@ -18,6 +25,8 @@
+     @Column(nullable = false)
+     private int cantidad;
+ 
++    // Cada suministro hace referencia a UN registro de cada tipo.
++    // @JoinColumn indica el nombre de la clave ajena en la tabla gestiones.
+     @ManyToOne(optional = false, fetch = FetchType.EAGER)
+     @JoinColumn(name = "proveedor_codigo", nullable = false)
+     private Proveedor proveedor;
+@@ -41,6 +50,8 @@
+         this.proyecto = proyecto;
+     }
+ 
++    // Esta validacion se ejecuta antes de guardar o modificar.
++    // Si hay un dato incorrecto, lanzamos una excepcion que la ventana captura.
+     public void validar() {
+         if (fecha == null) {
+             throw new IllegalArgumentException("La fecha es obligatoria");
+--- original/src/main/java/org/example/modelos/Pieza.java
++++ corregido/src/main/java/org/example/modelos/Pieza.java
+@@ -6,10 +6,16 @@
+ import java.util.ArrayList;
+ import java.util.List;
+ 
++/*
++ * ENTIDAD JPA: PIEZA
++ * @Entity indica que Hibernate guardara los objetos de esta clase en una tabla.
++ * Los getters y setters sirven para leer y modificar los atributos Java.
++ */
+ @Entity
+ @Table(name = "piezas")
+ public class Pieza {
+ 
++    // @Id marca la clave primaria que identifica cada registro.
+     @Id
+     @Column(length = 20)
+     private String codigo;
+@@ -22,6 +28,9 @@
+ 
+     private String descripcion;
+ 
++    // Un registro puede aparecer en muchos suministros (relacion 1:N).
++    // mappedBy indica que el lado que tiene la clave ajena es Gestion.
++    // LAZY significa que la lista no se carga hasta que hace falta.
+     @OneToMany(mappedBy = "pieza", fetch = FetchType.LAZY)
+     private List<Gestion> gestiones = new ArrayList<>();
+ 
+@@ -35,15 +44,29 @@
+         this.descripcion = descripcion;
+     }
+ 
++    // Esta validacion se ejecuta antes de guardar o modificar.
++    // Si hay un dato incorrecto, lanzamos una excepcion que la ventana captura.
+     public void validar() {
+         if (codigo == null || codigo.isBlank()) {
+             throw new IllegalArgumentException("El codigo de la pieza es obligatorio");
++        }
++        // En la tabla el codigo tiene como maximo 20 caracteres.
++        if (codigo.length() > 20) {
++            throw new IllegalArgumentException("El codigo no puede superar 20 caracteres");
+         }
+         if (nombre == null || nombre.isBlank()) {
+             throw new IllegalArgumentException("El nombre de la pieza es obligatorio");
+         }
+         if (precio == null || precio.compareTo(BigDecimal.ZERO) < 0) {
+             throw new IllegalArgumentException("El precio no puede ser negativo");
++        }
++        // La columna de la base de datos guarda solo dos decimales.
++        if (precio.scale() > 2) {
++            throw new IllegalArgumentException("El precio puede tener como maximo 2 decimales");
++        }
++        // precision=10 y scale=2 permiten hasta 8 cifras enteras y 2 decimales.
++        if (precio.compareTo(new BigDecimal("99999999.99")) > 0) {
++            throw new IllegalArgumentException("El precio supera el maximo permitido");
+         }
+     }
+ 
+--- original/src/main/java/org/example/modelos/Proveedor.java
++++ corregido/src/main/java/org/example/modelos/Proveedor.java
+@@ -5,10 +5,16 @@
+ import java.util.ArrayList;
+ import java.util.List;
+ 
++/*
++ * ENTIDAD JPA: PROVEEDOR
++ * @Entity indica que Hibernate guardara los objetos de esta clase en una tabla.
++ * Los getters y setters sirven para leer y modificar los atributos Java.
++ */
+ @Entity
+ @Table(name = "proveedores")
+ public class Proveedor {
+ 
++    // @Id marca la clave primaria que identifica cada registro.
+     @Id
+     @Column(length = 20)
+     private String codigo;
+@@ -22,6 +28,9 @@
+     @Column(nullable = false)
+     private String direccion;
+ 
++    // Un registro puede aparecer en muchos suministros (relacion 1:N).
++    // mappedBy indica que el lado que tiene la clave ajena es Gestion.
++    // LAZY significa que la lista no se carga hasta que hace falta.
+     @OneToMany(mappedBy = "proveedor", fetch = FetchType.LAZY)
+     private List<Gestion> gestiones = new ArrayList<>();
+ 
+@@ -35,9 +44,15 @@
+         this.direccion = direccion;
+     }
+ 
++    // Esta validacion se ejecuta antes de guardar o modificar.
++    // Si hay un dato incorrecto, lanzamos una excepcion que la ventana captura.
+     public void validar() {
+         if (codigo == null || codigo.isBlank()) {
+             throw new IllegalArgumentException("El codigo del proveedor es obligatorio");
++        }
++        // En la tabla el codigo tiene como maximo 20 caracteres.
++        if (codigo.length() > 20) {
++            throw new IllegalArgumentException("El codigo no puede superar 20 caracteres");
+         }
+         if (nombre == null || nombre.isBlank()) {
+             throw new IllegalArgumentException("El nombre del proveedor es obligatorio");
+--- original/src/main/java/org/example/modelos/Proyecto.java
++++ corregido/src/main/java/org/example/modelos/Proyecto.java
+@@ -5,10 +5,16 @@
+ import java.util.ArrayList;
+ import java.util.List;
+ 
++/*
++ * ENTIDAD JPA: PROYECTO
++ * @Entity indica que Hibernate guardara los objetos de esta clase en una tabla.
++ * Los getters y setters sirven para leer y modificar los atributos Java.
++ */
+ @Entity
+ @Table(name = "proyectos")
+ public class Proyecto {
+ 
++    // @Id marca la clave primaria que identifica cada registro.
+     @Id
+     @Column(length = 20)
+     private String codigo;
+@@ -19,6 +25,9 @@
+     @Column(nullable = false)
+     private String ciudad;
+ 
++    // Un registro puede aparecer en muchos suministros (relacion 1:N).
++    // mappedBy indica que el lado que tiene la clave ajena es Gestion.
++    // LAZY significa que la lista no se carga hasta que hace falta.
+     @OneToMany(mappedBy = "proyecto", fetch = FetchType.LAZY)
+     private List<Gestion> gestiones = new ArrayList<>();
+ 
+@@ -31,9 +40,15 @@
+         this.ciudad = ciudad;
+     }
+ 
++    // Esta validacion se ejecuta antes de guardar o modificar.
++    // Si hay un dato incorrecto, lanzamos una excepcion que la ventana captura.
+     public void validar() {
+         if (codigo == null || codigo.isBlank()) {
+             throw new IllegalArgumentException("El codigo del proyecto es obligatorio");
++        }
++        // En la tabla el codigo tiene como maximo 20 caracteres.
++        if (codigo.length() > 20) {
++            throw new IllegalArgumentException("El codigo no puede superar 20 caracteres");
+         }
+         if (nombre == null || nombre.isBlank()) {
+             throw new IllegalArgumentException("El nombre del proyecto es obligatorio");
+--- original/src/test/java/org/example/DaoJUnitTest.java
++++ corregido/src/test/java/org/example/DaoJUnitTest.java
+@@ -0,0 +1,201 @@
++package org.example;
++
++import org.example.dao.*;
++import org.example.modelos.*;
++
++import org.junit.jupiter.api.Test;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.util.UUID;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++/*
++ * PRUEBAS JUNIT - DaoJUnitTest
++ * @Test marca cada comprobacion automatica.
++ * assertEquals compara el resultado con lo esperado y assertNotNull comprueba
++ * que una busqueda ha encontrado el objeto. Los tests DAO usan MariaDB real.
++ * finally intenta borrar los registros creados durante las pruebas.
++ */
++public class DaoJUnitTest {
++
++    // PRUEBA 1: PROVEEDORES
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
++    @Test
++    void probarProveedor() {
++
++        String codigo = "T" + UUID.randomUUID().toString().substring(0, 8);
++
++        try {
++
++            // AÑADIR
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = new Proveedor(codigo, "Proveedor Test", "Apellido Test", "Calle A");
++
++                dao.create(proveedor);
++            }
++
++            // BUSCAR Y MODIFICAR
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = dao.find(codigo);
++
++                assertNotNull(proveedor);
++
++                assertEquals("Proveedor Test", proveedor.getNombre());
++
++                proveedor.setDireccion("Calle B");
++
++                dao.update(proveedor);
++            }
++
++            // COMPROBAR MODIFICACION
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = dao.find(codigo);
++
++                assertNotNull(proveedor);
++
++                assertEquals("Calle B", proveedor.getDireccion());
++            }
++
++        } finally {
++
++            // ELIMINAR DATOS DE PRUEBA
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = dao.find(codigo);
++
++                if (proveedor != null) {
++                    dao.delete(proveedor);
++                }
++            }
++        }
++
++        // COMPROBAR ELIMINACION
++        try (ProveedorDao dao = new ProveedorDao()) {
++
++            assertNull(dao.find(codigo));
++        }
++    }
++
++
++    // PRUEBA 2: GESTIONES
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
++    @Test
++    void probarGestion() {
++
++        String codigo = UUID.randomUUID().toString().substring(0, 8);
++
++        String codProveedor = "P" + codigo;
++        String codPieza = "Z" + codigo;
++        String codProyecto = "Y" + codigo;
++
++        Integer idGestion = null;
++
++        try {
++
++            // CREAR PROVEEDOR
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                dao.create(new Proveedor(codProveedor, "Proveedor Test", "Apellido Test", "Calle A"));
++            }
++
++            // CREAR PIEZA
++            try (PiezaDao dao = new PiezaDao()) {
++
++                dao.create(new Pieza(codPieza, "Tornillos", new BigDecimal("5.50"), "Caja de tornillos"));
++            }
++
++            // CREAR PROYECTO
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                dao.create(new Proyecto(codProyecto, "Proyecto Test", "Vitoria"));
++            }
++
++            // CREAR GESTION
++            try (GestionDao dao = new GestionDao()) {
++
++                Proveedor proveedor = dao.getEntityManager().find(Proveedor.class, codProveedor);
++
++                Pieza pieza = dao.getEntityManager().find(Pieza.class, codPieza);
++
++                Proyecto proyecto = dao.getEntityManager().find(Proyecto.class, codProyecto);
++
++                Gestion gestion = new Gestion(LocalDate.now(), 100, proveedor, pieza, proyecto);
++
++                dao.create(gestion);
++
++                idGestion = gestion.getId();
++
++                assertNotNull(idGestion);
++            }
++
++            // COMPROBAR QUE EXISTE
++            try (GestionDao dao = new GestionDao()) {
++
++                Gestion gestion = dao.find(idGestion);
++
++                assertNotNull(gestion);
++
++                assertEquals(100, gestion.getCantidad());
++            }
++
++            // COMPROBAR QUE NO SE PUEDE
++            // ELIMINAR UN PROVEEDOR CON SUMINISTROS
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = dao.find(codProveedor);
++
++                assertThrows(IllegalArgumentException.class, () -> dao.delete(proveedor));
++            }
++
++        } finally {
++
++            // ELIMINAR PRIMERO LA GESTION
++            if (idGestion != null) {
++
++                try (GestionDao dao = new GestionDao()) {
++
++                    Gestion gestion = dao.find(idGestion);
++
++                    if (gestion != null) {
++                        dao.delete(gestion);
++                    }
++                }
++            }
++
++            // ELIMINAR PROVEEDOR
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = dao.find(codProveedor);
++
++                if (proveedor != null) {
++                    dao.delete(proveedor);
++                }
++            }
++
++            // ELIMINAR PIEZA
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = dao.find(codPieza);
++
++                if (pieza != null) {
++                    dao.delete(pieza);
++                }
++            }
++
++            // ELIMINAR PROYECTO
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = dao.find(codProyecto);
++
++                if (proyecto != null) {
++                    dao.delete(proyecto);
++                }
++            }
++        }
++    }
++}
+--- original/src/test/java/org/example/DaoRestantesTest.java
++++ corregido/src/test/java/org/example/DaoRestantesTest.java
+@@ -0,0 +1,290 @@
++package org.example;
++
++import org.example.dao.*;
++import org.example.modelos.*;
++
++import org.junit.jupiter.api.Test;
++
++import java.math.BigDecimal;
++import java.time.LocalDate;
++import java.util.UUID;
++
++import static org.junit.jupiter.api.Assertions.*;
++
++/*
++ * PRUEBAS JUNIT - DaoRestantesTest
++ * @Test marca cada comprobacion automatica.
++ * assertEquals compara el resultado con lo esperado y assertNotNull comprueba
++ * que una busqueda ha encontrado el objeto. Los tests DAO usan MariaDB real.
++ * finally intenta borrar los registros creados durante las pruebas.
++ */
++public class DaoRestantesTest {
++
++    // PRUEBA 1: PIEZAS
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
++    @Test
++    void probarPieza() {
++
++        String codigo = "Z" + UUID.randomUUID().toString().substring(0, 8);
++
++        try {
++
++            // AÑADIR
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = new Pieza(codigo, "Pieza Test", new BigDecimal("10.50"), "Descripcion de prueba");
++
++                dao.create(pieza);
++            }
++
++            // BUSCAR Y MODIFICAR
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = dao.find(codigo);
++
++                assertNotNull(pieza);
++                assertEquals("Pieza Test", pieza.getNombre());
++
++                pieza.setPrecio(new BigDecimal("20.50"));
++
++                dao.update(pieza);
++            }
++
++            // COMPROBAR LOS CAMBIOS
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = dao.find(codigo);
++
++                assertNotNull(pieza);
++
++                assertEquals(0, pieza.getPrecio().compareTo(new BigDecimal("20.50")));
++
++                assertFalse(dao.buscarPorNombre("Pieza Test").isEmpty());
++            }
++
++        } finally {
++
++            // ELIMINAR DATOS DE PRUEBA
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = dao.find(codigo);
++
++                if (pieza != null) {
++                    dao.delete(pieza);
++                }
++            }
++        }
++
++        // COMPROBAR QUE YA NO EXISTE
++        try (PiezaDao dao = new PiezaDao()) {
++
++            assertNull(dao.find(codigo));
++        }
++    }
++
++
++    // PRUEBA 2: PROYECTOS
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
++    @Test
++    void probarProyecto() {
++
++        String codigo = "Y" + UUID.randomUUID().toString().substring(0, 8);
++
++        try {
++
++            // AÑADIR
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = new Proyecto(codigo, "Proyecto Test", "Vitoria");
++
++                dao.create(proyecto);
++            }
++
++            // BUSCAR Y MODIFICAR
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = dao.find(codigo);
++
++                assertNotNull(proyecto);
++                assertEquals("Vitoria", proyecto.getCiudad());
++
++                proyecto.setCiudad("Bilbao");
++
++                dao.update(proyecto);
++            }
++
++            // COMPROBAR CAMBIOS Y BUSQUEDA
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = dao.find(codigo);
++
++                assertNotNull(proyecto);
++
++                assertEquals("Bilbao", proyecto.getCiudad());
++
++                assertFalse(dao.buscarPorCiudad("Bilbao").isEmpty());
++            }
++
++        } finally {
++
++            // ELIMINAR DATOS DE PRUEBA
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = dao.find(codigo);
++
++                if (proyecto != null) {
++                    dao.delete(proyecto);
++                }
++            }
++        }
++
++        // COMPROBAR QUE YA NO EXISTE
++        try (ProyectoDao dao = new ProyectoDao()) {
++
++            assertNull(dao.find(codigo));
++        }
++    }
++
++
++    // PRUEBA 3: GESTIONES Y RELACIONES
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
++    @Test
++    void probarGestion() {
++
++        String codigo = UUID.randomUUID().toString().substring(0, 8);
++
++        String codigoProveedor = "P" + codigo;
++        String codigoPieza = "Z" + codigo;
++        String codigoProyecto = "Y" + codigo;
++
++        Integer idGestion = null;
++
++        try {
++
++            // CREAR PROVEEDOR
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                dao.create(new Proveedor(codigoProveedor, "Proveedor Test", "Apellido Test", "Calle Test"));
++            }
++
++            // CREAR PIEZA
++            try (PiezaDao dao = new PiezaDao()) {
++
++                dao.create(new Pieza(codigoPieza, "Pieza Test", new BigDecimal("12.50"), "Descripcion Test"));
++            }
++
++            // CREAR PROYECTO
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                dao.create(new Proyecto(codigoProyecto, "Proyecto Test", "Vitoria"));
++            }
++
++            // CREAR GESTION
++            try (GestionDao dao = new GestionDao()) {
++
++                Proveedor proveedor = dao.getEntityManager().find(Proveedor.class, codigoProveedor);
++
++                Pieza pieza = dao.getEntityManager().find(Pieza.class, codigoPieza);
++
++                Proyecto proyecto = dao.getEntityManager().find(Proyecto.class, codigoProyecto);
++
++                Gestion gestion = new Gestion(LocalDate.now(), 10, proveedor, pieza, proyecto);
++
++                dao.create(gestion);
++
++                idGestion = gestion.getId();
++
++                assertNotNull(idGestion);
++            }
++
++            // MODIFICAR CANTIDAD
++            try (GestionDao dao = new GestionDao()) {
++
++                Gestion gestion = dao.find(idGestion);
++
++                assertNotNull(gestion);
++
++                gestion.setCantidad(25);
++
++                dao.update(gestion);
++            }
++
++            // COMPROBAR LA MODIFICACION Y BUSQUEDAS
++            try (GestionDao dao = new GestionDao()) {
++
++                Gestion gestion = dao.find(idGestion);
++
++                assertNotNull(gestion);
++
++                assertEquals(25, gestion.getCantidad());
++
++                assertFalse(dao.buscarPorProveedor(codigoProveedor).isEmpty());
++
++                assertFalse(dao.buscarPorPieza(codigoPieza).isEmpty());
++
++                assertFalse(dao.buscarPorProyecto(codigoProyecto).isEmpty());
++            }
++
++            // NO PERMITIR BORRAR PIEZA CON SUMINISTROS
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = dao.find(codigoPieza);
++
++                assertThrows(IllegalArgumentException.class, () -> dao.delete(pieza));
++            }
++
++            // NO PERMITIR BORRAR PROYECTO CON SUMINISTROS
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = dao.find(codigoProyecto);
++
++                assertThrows(IllegalArgumentException.class, () -> dao.delete(proyecto));
++            }
++
++        } finally {
++
++            // PRIMERO BORRAR LA GESTION
++            if (idGestion != null) {
++
++                try (GestionDao dao = new GestionDao()) {
++
++                    Gestion gestion = dao.find(idGestion);
++
++                    if (gestion != null) {
++                        dao.delete(gestion);
++                    }
++                }
++            }
++
++            // BORRAR PROVEEDOR
++            try (ProveedorDao dao = new ProveedorDao()) {
++
++                Proveedor proveedor = dao.find(codigoProveedor);
++
++                if (proveedor != null) {
++                    dao.delete(proveedor);
++                }
++            }
++
++            // BORRAR PIEZA
++            try (PiezaDao dao = new PiezaDao()) {
++
++                Pieza pieza = dao.find(codigoPieza);
++
++                if (pieza != null) {
++                    dao.delete(pieza);
++                }
++            }
++
++            // BORRAR PROYECTO
++            try (ProyectoDao dao = new ProyectoDao()) {
++
++                Proyecto proyecto = dao.find(codigoProyecto);
++
++                if (proyecto != null) {
++                    dao.delete(proyecto);
++                }
++            }
++        }
++    }
++}
+--- original/src/test/java/org/example/modelos/ConfiguracionTest.java
++++ corregido/src/test/java/org/example/modelos/ConfiguracionTest.java
+@@ -3,9 +3,17 @@
+ import org.junit.jupiter.api.Test;
+ import static org.junit.jupiter.api.Assertions.assertEquals;
+ 
++/*
++ * PRUEBAS JUNIT - ConfiguracionTest
++ * @Test marca cada comprobacion automatica.
++ * assertEquals compara el resultado con lo esperado y assertNotNull comprueba
++ * que una busqueda ha encontrado el objeto. Los tests DAO usan MariaDB real.
++ * finally intenta borrar los registros creados durante las pruebas.
++ */
+ public class ConfiguracionTest {
+     // Prueba inicial: comprueba que se ejecuta JUnit 5.
+     // No cuenta como prueba del proyecto; crearemos esas mas adelante.
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void comprobarJUnit() {
+         assertEquals(2, 1 + 1);
+--- original/src/test/java/org/example/modelos/DaoJUnitTest.java
++++ corregido/src/test/java/org/example/modelos/DaoJUnitTest.java
+@@ -1,192 +0,0 @@
+-package org.example;
+-
+-import org.example.dao.*;
+-import org.example.modelos.*;
+-
+-import org.junit.jupiter.api.Test;
+-
+-import java.math.BigDecimal;
+-import java.time.LocalDate;
+-import java.util.UUID;
+-
+-import static org.junit.jupiter.api.Assertions.*;
+-
+-public class DaoJUnitTest {
+-
+-    // PRUEBA 1: PROVEEDORES
+-    @Test
+-    void probarProveedor() {
+-
+-        String codigo = "T" + UUID.randomUUID().toString().substring(0, 8);
+-
+-        try {
+-
+-            // AÑADIR
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = new Proveedor(codigo, "Proveedor Test", "Apellido Test", "Calle A");
+-
+-                dao.create(proveedor);
+-            }
+-
+-            // BUSCAR Y MODIFICAR
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = dao.find(codigo);
+-
+-                assertNotNull(proveedor);
+-
+-                assertEquals("Proveedor Test", proveedor.getNombre());
+-
+-                proveedor.setDireccion("Calle B");
+-
+-                dao.update(proveedor);
+-            }
+-
+-            // COMPROBAR MODIFICACION
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = dao.find(codigo);
+-
+-                assertNotNull(proveedor);
+-
+-                assertEquals("Calle B", proveedor.getDireccion());
+-            }
+-
+-        } finally {
+-
+-            // ELIMINAR DATOS DE PRUEBA
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = dao.find(codigo);
+-
+-                if (proveedor != null) {
+-                    dao.delete(proveedor);
+-                }
+-            }
+-        }
+-
+-        // COMPROBAR ELIMINACION
+-        try (ProveedorDao dao = new ProveedorDao()) {
+-
+-            assertNull(dao.find(codigo));
+-        }
+-    }
+-
+-
+-    // PRUEBA 2: GESTIONES
+-    @Test
+-    void probarGestion() {
+-
+-        String codigo = UUID.randomUUID().toString().substring(0, 8);
+-
+-        String codProveedor = "P" + codigo;
+-        String codPieza = "Z" + codigo;
+-        String codProyecto = "Y" + codigo;
+-
+-        Integer idGestion = null;
+-
+-        try {
+-
+-            // CREAR PROVEEDOR
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                dao.create(new Proveedor(codProveedor, "Proveedor Test", "Apellido Test", "Calle A"));
+-            }
+-
+-            // CREAR PIEZA
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                dao.create(new Pieza(codPieza, "Tornillos", new BigDecimal("5.50"), "Caja de tornillos"));
+-            }
+-
+-            // CREAR PROYECTO
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                dao.create(new Proyecto(codProyecto, "Proyecto Test", "Vitoria"));
+-            }
+-
+-            // CREAR GESTION
+-            try (GestionDao dao = new GestionDao()) {
+-
+-                Proveedor proveedor = dao.getEntityManager().find(Proveedor.class, codProveedor);
+-
+-                Pieza pieza = dao.getEntityManager().find(Pieza.class, codPieza);
+-
+-                Proyecto proyecto = dao.getEntityManager().find(Proyecto.class, codProyecto);
+-
+-                Gestion gestion = new Gestion(LocalDate.now(), 100, proveedor, pieza, proyecto);
+-
+-                dao.create(gestion);
+-
+-                idGestion = gestion.getId();
+-
+-                assertNotNull(idGestion);
+-            }
+-
+-            // COMPROBAR QUE EXISTE
+-            try (GestionDao dao = new GestionDao()) {
+-
+-                Gestion gestion = dao.find(idGestion);
+-
+-                assertNotNull(gestion);
+-
+-                assertEquals(100, gestion.getCantidad());
+-            }
+-
+-            // COMPROBAR QUE NO SE PUEDE
+-            // ELIMINAR UN PROVEEDOR CON SUMINISTROS
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = dao.find(codProveedor);
+-
+-                assertThrows(IllegalArgumentException.class, () -> dao.delete(proveedor));
+-            }
+-
+-        } finally {
+-
+-            // ELIMINAR PRIMERO LA GESTION
+-            if (idGestion != null) {
+-
+-                try (GestionDao dao = new GestionDao()) {
+-
+-                    Gestion gestion = dao.find(idGestion);
+-
+-                    if (gestion != null) {
+-                        dao.delete(gestion);
+-                    }
+-                }
+-            }
+-
+-            // ELIMINAR PROVEEDOR
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = dao.find(codProveedor);
+-
+-                if (proveedor != null) {
+-                    dao.delete(proveedor);
+-                }
+-            }
+-
+-            // ELIMINAR PIEZA
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = dao.find(codPieza);
+-
+-                if (pieza != null) {
+-                    dao.delete(pieza);
+-                }
+-            }
+-
+-            // ELIMINAR PROYECTO
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = dao.find(codProyecto);
+-
+-                if (proyecto != null) {
+-                    dao.delete(proyecto);
+-                }
+-            }
+-        }
+-    }
+-}
+--- original/src/test/java/org/example/modelos/DaoRestantesTest.java
++++ corregido/src/test/java/org/example/modelos/DaoRestantesTest.java
+@@ -1,280 +0,0 @@
+-package org.example;
+-
+-import org.example.dao.*;
+-import org.example.modelos.*;
+-
+-import org.junit.jupiter.api.Test;
+-
+-import java.math.BigDecimal;
+-import java.time.LocalDate;
+-import java.util.UUID;
+-
+-import static org.junit.jupiter.api.Assertions.*;
+-
+-public class DaoRestantesTest {
+-
+-    // PRUEBA 1: PIEZAS
+-    @Test
+-    void probarPieza() {
+-
+-        String codigo = "Z" + UUID.randomUUID().toString().substring(0, 8);
+-
+-        try {
+-
+-            // AÑADIR
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = new Pieza(codigo, "Pieza Test", new BigDecimal("10.50"), "Descripcion de prueba");
+-
+-                dao.create(pieza);
+-            }
+-
+-            // BUSCAR Y MODIFICAR
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = dao.find(codigo);
+-
+-                assertNotNull(pieza);
+-                assertEquals("Pieza Test", pieza.getNombre());
+-
+-                pieza.setPrecio(new BigDecimal("20.50"));
+-
+-                dao.update(pieza);
+-            }
+-
+-            // COMPROBAR LOS CAMBIOS
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = dao.find(codigo);
+-
+-                assertNotNull(pieza);
+-
+-                assertEquals(0, pieza.getPrecio().compareTo(new BigDecimal("20.50")));
+-
+-                assertFalse(dao.buscarPorNombre("Pieza Test").isEmpty());
+-            }
+-
+-        } finally {
+-
+-            // ELIMINAR DATOS DE PRUEBA
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = dao.find(codigo);
+-
+-                if (pieza != null) {
+-                    dao.delete(pieza);
+-                }
+-            }
+-        }
+-
+-        // COMPROBAR QUE YA NO EXISTE
+-        try (PiezaDao dao = new PiezaDao()) {
+-
+-            assertNull(dao.find(codigo));
+-        }
+-    }
+-
+-
+-    // PRUEBA 2: PROYECTOS
+-    @Test
+-    void probarProyecto() {
+-
+-        String codigo = "Y" + UUID.randomUUID().toString().substring(0, 8);
+-
+-        try {
+-
+-            // AÑADIR
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = new Proyecto(codigo, "Proyecto Test", "Vitoria");
+-
+-                dao.create(proyecto);
+-            }
+-
+-            // BUSCAR Y MODIFICAR
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = dao.find(codigo);
+-
+-                assertNotNull(proyecto);
+-                assertEquals("Vitoria", proyecto.getCiudad());
+-
+-                proyecto.setCiudad("Bilbao");
+-
+-                dao.update(proyecto);
+-            }
+-
+-            // COMPROBAR CAMBIOS Y BUSQUEDA
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = dao.find(codigo);
+-
+-                assertNotNull(proyecto);
+-
+-                assertEquals("Bilbao", proyecto.getCiudad());
+-
+-                assertFalse(dao.buscarPorCiudad("Bilbao").isEmpty());
+-            }
+-
+-        } finally {
+-
+-            // ELIMINAR DATOS DE PRUEBA
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = dao.find(codigo);
+-
+-                if (proyecto != null) {
+-                    dao.delete(proyecto);
+-                }
+-            }
+-        }
+-
+-        // COMPROBAR QUE YA NO EXISTE
+-        try (ProyectoDao dao = new ProyectoDao()) {
+-
+-            assertNull(dao.find(codigo));
+-        }
+-    }
+-
+-
+-    // PRUEBA 3: GESTIONES Y RELACIONES
+-    @Test
+-    void probarGestion() {
+-
+-        String codigo = UUID.randomUUID().toString().substring(0, 8);
+-
+-        String codigoProveedor = "P" + codigo;
+-        String codigoPieza = "Z" + codigo;
+-        String codigoProyecto = "Y" + codigo;
+-
+-        Integer idGestion = null;
+-
+-        try {
+-
+-            // CREAR PROVEEDOR
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                dao.create(new Proveedor(codigoProveedor, "Proveedor Test", "Apellido Test", "Calle Test"));
+-            }
+-
+-            // CREAR PIEZA
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                dao.create(new Pieza(codigoPieza, "Pieza Test", new BigDecimal("12.50"), "Descripcion Test"));
+-            }
+-
+-            // CREAR PROYECTO
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                dao.create(new Proyecto(codigoProyecto, "Proyecto Test", "Vitoria"));
+-            }
+-
+-            // CREAR GESTION
+-            try (GestionDao dao = new GestionDao()) {
+-
+-                Proveedor proveedor = dao.getEntityManager().find(Proveedor.class, codigoProveedor);
+-
+-                Pieza pieza = dao.getEntityManager().find(Pieza.class, codigoPieza);
+-
+-                Proyecto proyecto = dao.getEntityManager().find(Proyecto.class, codigoProyecto);
+-
+-                Gestion gestion = new Gestion(LocalDate.now(), 10, proveedor, pieza, proyecto);
+-
+-                dao.create(gestion);
+-
+-                idGestion = gestion.getId();
+-
+-                assertNotNull(idGestion);
+-            }
+-
+-            // MODIFICAR CANTIDAD
+-            try (GestionDao dao = new GestionDao()) {
+-
+-                Gestion gestion = dao.find(idGestion);
+-
+-                assertNotNull(gestion);
+-
+-                gestion.setCantidad(25);
+-
+-                dao.update(gestion);
+-            }
+-
+-            // COMPROBAR LA MODIFICACION Y BUSQUEDAS
+-            try (GestionDao dao = new GestionDao()) {
+-
+-                Gestion gestion = dao.find(idGestion);
+-
+-                assertNotNull(gestion);
+-
+-                assertEquals(25, gestion.getCantidad());
+-
+-                assertFalse(dao.buscarPorProveedor(codigoProveedor).isEmpty());
+-
+-                assertFalse(dao.buscarPorPieza(codigoPieza).isEmpty());
+-
+-                assertFalse(dao.buscarPorProyecto(codigoProyecto).isEmpty());
+-            }
+-
+-            // NO PERMITIR BORRAR PIEZA CON SUMINISTROS
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = dao.find(codigoPieza);
+-
+-                assertThrows(IllegalArgumentException.class, () -> dao.delete(pieza));
+-            }
+-
+-            // NO PERMITIR BORRAR PROYECTO CON SUMINISTROS
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = dao.find(codigoProyecto);
+-
+-                assertThrows(IllegalArgumentException.class, () -> dao.delete(proyecto));
+-            }
+-
+-        } finally {
+-
+-            // PRIMERO BORRAR LA GESTION
+-            if (idGestion != null) {
+-
+-                try (GestionDao dao = new GestionDao()) {
+-
+-                    Gestion gestion = dao.find(idGestion);
+-
+-                    if (gestion != null) {
+-                        dao.delete(gestion);
+-                    }
+-                }
+-            }
+-
+-            // BORRAR PROVEEDOR
+-            try (ProveedorDao dao = new ProveedorDao()) {
+-
+-                Proveedor proveedor = dao.find(codigoProveedor);
+-
+-                if (proveedor != null) {
+-                    dao.delete(proveedor);
+-                }
+-            }
+-
+-            // BORRAR PIEZA
+-            try (PiezaDao dao = new PiezaDao()) {
+-
+-                Pieza pieza = dao.find(codigoPieza);
+-
+-                if (pieza != null) {
+-                    dao.delete(pieza);
+-                }
+-            }
+-
+-            // BORRAR PROYECTO
+-            try (ProyectoDao dao = new ProyectoDao()) {
+-
+-                Proyecto proyecto = dao.find(codigoProyecto);
+-
+-                if (proyecto != null) {
+-                    dao.delete(proyecto);
+-                }
+-            }
+-        }
+-    }
+-}
+--- original/src/test/java/org/example/modelos/ProveedorDAOTest.java
++++ corregido/src/test/java/org/example/modelos/ProveedorDAOTest.java
+@@ -7,8 +7,16 @@
+ 
+ import static org.junit.jupiter.api.Assertions.*;
+ 
++/*
++ * PRUEBAS JUNIT - ProveedorDAOTest
++ * @Test marca cada comprobacion automatica.
++ * assertEquals compara el resultado con lo esperado y assertNotNull comprueba
++ * que una busqueda ha encontrado el objeto. Los tests DAO usan MariaDB real.
++ * finally intenta borrar los registros creados durante las pruebas.
++ */
+ public class ProveedorDAOTest {
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void comprobarCrudProveedor() {
+ 
+--- original/src/test/java/org/example/modelos/ValidacionesTest.java
++++ corregido/src/test/java/org/example/modelos/ValidacionesTest.java
+@@ -5,32 +5,44 @@
+ import java.time.LocalDate;
+ import static org.junit.jupiter.api.Assertions.*;
+ 
++/*
++ * PRUEBAS JUNIT - ValidacionesTest
++ * @Test marca cada comprobacion automatica.
++ * assertEquals compara el resultado con lo esperado y assertNotNull comprueba
++ * que una busqueda ha encontrado el objeto. Los tests DAO usan MariaDB real.
++ * finally intenta borrar los registros creados durante las pruebas.
++ */
+ public class ValidacionesTest {
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void proveedorCorrecto() {
+         Proveedor proveedor = new Proveedor("PR01", "Proveedor 1", "Apellidos 1", "Calle A");
+         assertDoesNotThrow(proveedor::validar);
+     }
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void proveedorSinCodigo() {
+         Proveedor proveedor = new Proveedor("", "Proveedor 1", "Apellidos 1", "Calle A");
+         assertThrows(IllegalArgumentException.class, proveedor::validar);
+     }
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void piezaConPrecioNegativo() {
+         Pieza pieza = new Pieza("P01", "Pieza A", new BigDecimal("-2.50"), "Descripcion");
+         assertThrows(IllegalArgumentException.class, pieza::validar);
+     }
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void proyectoSinCiudad() {
+         Proyecto proyecto = new Proyecto("PY01", "Proyecto A", "");
+         assertThrows(IllegalArgumentException.class, proyecto::validar);
+     }
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void gestionConCantidadCero() {
+         Proveedor proveedor = new Proveedor("PR01", "Proveedor 1", "Apellidos 1", "Calle A");
+@@ -40,6 +52,7 @@
+         assertThrows(IllegalArgumentException.class, gestion::validar);
+     }
+ 
++    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
+     @Test
+     void gestionCorrecta() {
+         Proveedor proveedor = new Proveedor("PR01", "Proveedor 1", "Apellidos 1", "Calle A");

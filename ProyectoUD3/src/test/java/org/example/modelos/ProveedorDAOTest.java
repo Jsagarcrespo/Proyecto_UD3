@@ -1,14 +1,22 @@
-package org.example.dao;
+package org.example.modelos;
 
-import org.example.modelos.Proveedor;
+import org.example.dao.ProveedorDao;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+ * PRUEBAS JUNIT - ProveedorDAOTest
+ * @Test marca cada comprobacion automatica.
+ * assertEquals compara el resultado con lo esperado y assertNotNull comprueba
+ * que una busqueda ha encontrado el objeto. Los tests DAO usan MariaDB real.
+ * finally intenta borrar los registros creados durante las pruebas.
+ */
 public class ProveedorDAOTest {
 
+    // JUnit ejecuta este metodo y marca en rojo la prueba si falla un assert.
     @Test
     void comprobarCrudProveedor() {
 

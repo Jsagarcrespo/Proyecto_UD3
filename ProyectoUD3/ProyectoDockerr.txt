@@ -1,3 +1,64 @@
 docker run -d --name mariadb-ud3 -e MARIADB_ROOT_PASSWORD=12345Abcde -e MARIADB_DATABASE=proyecto_ud3 -p 3306:3306 -v datos_ud3:/var/lib/mysql mariadb:11.4
 docker exec -it mariadb-ud3 mariadb -u root -p
 12345Abcde
+
+####################INSERTS PRUEBAS#######################
+##########################################################
+##########################################################
+
+
+USE proyecto_ud3;
+
+-- =====================================
+-- 1. PROVEEDORES
+-- =====================================
+
+INSERT INTO proveedores
+(codigo, nombre, apellidos, direccion)
+VALUES
+('PR001', 'Proveedor 1', 'Apellido 1', 'Calle Mayor 10'),
+('PR002', 'Proveedor 2', 'Apellido 2', 'Calle Norte 15'),
+('PR003', 'Proveedor 3', 'Apellido 3', 'Calle Sur 20'),
+('PR004', 'Proveedor 4', 'Apellido 4', 'Calle Este 5');
+
+
+-- =====================================
+-- 2. PIEZAS
+-- =====================================
+
+INSERT INTO piezas
+(codigo, nombre, precio, descripcion)
+VALUES
+('PI001', 'Tornillos', 3.50, 'Caja de tornillos'),
+('PI002', 'Tuercas', 2.20, 'Bolsa de tuercas'),
+('PI003', 'Arandelas', 1.80, 'Arandelas de acero'),
+('PI004', 'Bisagras', 8.75, 'Bisagras metalicas');
+
+
+-- =====================================
+-- 3. PROYECTOS
+-- =====================================
+
+INSERT INTO proyectos
+(codigo, nombre, ciudad)
+VALUES
+('PY001', 'Edificio A', 'Vitoria'),
+('PY002', 'Almacen B', 'Bilbao'),
+('PY003', 'Oficinas C', 'Donostia');
+
+
+-- =====================================
+-- 4. SUMINISTROS (GESTIONES)
+-- =====================================
+-- El ID no se introduce porque Hibernate
+-- lo tiene configurado como autoincremental.
+
+INSERT INTO gestiones
+(fecha, cantidad, proveedor_codigo,
+ pieza_codigo, proyecto_codigo)
+VALUES
+('2026-11-10', 100, 'PR001', 'PI001', 'PY001'),
+('2026-11-10', 50,  'PR001', 'PI002', 'PY001'),
+('2026-11-10', 200, 'PR002', 'PI003', 'PY002'),
+('2026-11-10', 75,  'PR002', 'PI001', 'PY002'),
+('2026-11-10', 40,  'PR003', 'PI002', 'PY001');

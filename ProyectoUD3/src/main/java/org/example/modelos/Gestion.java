@@ -4,11 +4,18 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+/*
+ * ENTIDAD JPA: GESTION
+ * @Entity indica que Hibernate guardara los objetos de esta clase en una tabla.
+ * Los getters y setters sirven para leer y modificar los atributos Java.
+ */
 @Entity
 @Table(name = "gestiones")
 public class Gestion {
 
+    // @Id marca la clave primaria que identifica cada registro.
     @Id
+    // IDENTITY: MariaDB genera el numero cuando se inserta la gestion.
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
@@ -18,6 +25,8 @@ public class Gestion {
     @Column(nullable = false)
     private int cantidad;
 
+    // Cada suministro hace referencia a UN registro de cada tipo.
+    // @JoinColumn indica el nombre de la clave ajena en la tabla gestiones.
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "proveedor_codigo", nullable = false)
     private Proveedor proveedor;
@@ -41,6 +50,8 @@ public class Gestion {
         this.proyecto = proyecto;
     }
 
+    // Esta validacion se ejecuta antes de guardar o modificar.
+    // Si hay un dato incorrecto, lanzamos una excepcion que la ventana captura.
     public void validar() {
         if (fecha == null) {
             throw new IllegalArgumentException("La fecha es obligatoria");

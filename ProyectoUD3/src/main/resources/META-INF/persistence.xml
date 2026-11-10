@@ -7,8 +7,8 @@
 
 
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-        <!-- Las cuatro clases @Entity se añadiran en el paso siguiente. -->
-        <!-- docker run -d (-)-name mariadb-ud3 -e MARIADB_ROOT_PASSWORD=12345Abcde -e MARIADB_DATABASE=proyecto_ud3 -p 3306:3306 -v datos_ud3:/var/lib/mysql mariadb:11.4-->
+        <!-- Estas son las cuatro entidades que Hibernate tiene que reconocer. -->
+        <!-- La configuracion siguiente conecta Hibernate con la MariaDB local. -->
 
         <class>org.example.modelos.Proveedor</class>
         <class>org.example.modelos.Pieza</class>

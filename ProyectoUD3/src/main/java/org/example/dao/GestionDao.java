@@ -1,5 +1,11 @@
 package org.example.dao;
 
+/*
+ * DAO DE GESTIONES
+ * Guarda los suministros y permite buscarlos por proveedor, pieza o proyecto.
+ * En JPQL escribimos los nombres de las clases y de sus atributos Java.
+ */
+
 import org.example.Idao.IGestionDao;
 import org.example.modelos.Gestion;
 
@@ -10,6 +16,7 @@ import java.util.List;
 public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
 
     // BUSCAR POR ID
+    // find() busca por clave primaria y devuelve null si no existe.
     @Override
     public Gestion find(Integer id) {
 
@@ -17,6 +24,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     }
 
     // CREAR
+    // Antes de guardar validamos el objeto; super.create() realiza persist y commit.
     @Override
     public Gestion create(Gestion gestion) {
 
@@ -25,6 +33,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     }
 
     // MODIFICAR
+    // Valido y dejo que el DAO generico haga merge y confirme los cambios.
     @Override
     public Gestion update(Gestion gestion) {
 
@@ -33,6 +42,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     }
 
     // LISTAR TODAS LAS GESTIONES
+    // SELECT FROM devuelve objetos de la entidad, ordenados para mostrarlos.
     @Override
     public List<Gestion> listar() {
 
@@ -44,6 +54,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     }
 
     // BUSCAR POR PROVEEDOR
+    // La consulta utiliza la relacion con Gestion para filtrar por proveedor.
     @Override
     public List<Gestion> buscarPorProveedor(String codigo) {
 
@@ -57,6 +68,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     }
 
     // BUSCAR POR PIEZA
+    // JOIN une la entidad con sus gestiones para consultar piezas relacionadas.
     @Override
     public List<Gestion> buscarPorPieza(String codigo) {
 
@@ -70,6 +82,7 @@ public class GestionDao extends dao<Gestion, Integer> implements IGestionDao {
     }
 
     // BUSCAR POR PROYECTO
+    // La consulta utiliza la relacion con Gestion para filtrar por proyecto.
     @Override
     public List<Gestion> buscarPorProyecto(String codigo) {
 
